@@ -24,8 +24,22 @@ source ~/sim_ws/install/setup.bash
 ros2 launch the_construct_office_gazebo warehouse_rb1.launch.xml
 
 - Terminal 2
-ros2 launch map_server map_server.launch.py map_file:=warehouse_map_real.yaml
+ros2 launch map_server map_server.launch.py map_file:=warehouse_map_sim.yaml
 
-- Terminal 3
+- Terminal 3 (during development)
 cd ros2_ws/src/warehouse_project/
 rviz2 -d cartographer_slam/config/rviz2_config.rviz
+
+------ Task 2 Localization ---------
+- Terminal 1
+source ~/sim_ws/install/setup.bash
+ros2 launch the_construct_office_gazebo warehouse_rb1.launch.xml
+
+- Terminal 2
+ros2 launch localization_server localization.launch.py map_file:=warehouse_map_sim.yaml
+
+- Terminal 3
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r __ns:=/diffbot_base_controller -r cmd_vel:=cmd_vel_unstamped
+
+
+
