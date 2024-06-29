@@ -47,5 +47,5 @@ def generate_launch_description():
                         {'autostart': True},
                         {'node_names': ['map_server', 'amcl']}]
         ),
-        rviz_node
+        #rviz_node
     ])
