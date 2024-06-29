@@ -1,6 +1,7 @@
 - To move robot
 ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args  -r cmd_vel:=/diffbot_base_controller/cmd_vel_unstamped
-
+- real robot 
+ros2 run teleop_twist_keyboard teleop_twist_keyboard 
 ------   Task1 Mapping  --------
 
 - Terminal 1
@@ -24,6 +25,8 @@ ros2 launch the_construct_office_gazebo warehouse_rb1.launch.xml
 
 - Terminal 2
 ros2 launch map_server map_server.launch.py map_file:=warehouse_map_sim.yaml
+ or for real robot
+ros2 launch map_server map_server.launch.py map_file:=warehouse_map_real.yaml
 
 - Terminal 3 (during development)
 cd ros2_ws/src/warehouse_project/
@@ -36,6 +39,8 @@ ros2 launch the_construct_office_gazebo warehouse_rb1.launch.xml
 
 - Terminal 2
 ros2 launch localization_server localization.launch.py map_file:=warehouse_map_sim.yaml
+ or for real robot
+ros2 launch localization_server localization.launch.py map_file:=warehouse_map_real.yaml
 
 - Terminal 3
 ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args  -r cmd_vel:=/diffbot_base_controller/cmd_vel_unstamped
