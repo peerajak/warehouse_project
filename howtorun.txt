@@ -49,7 +49,7 @@ ros2 launch the_construct_office_gazebo warehouse_rb1.launch.xml
 ros2 launch localization_server localization.launch.py map_file:=warehouse_map_sim.yaml
 
 - Terminal 3
-ros2 launch path_planner_server pathplanner.launch.py map_file:=warehouse_map_sim.yaml
+ros2 launch path_planner_server pathplanner.launch.py 
 
 
 
