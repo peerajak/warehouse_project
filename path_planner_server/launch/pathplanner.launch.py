@@ -8,18 +8,19 @@ from launch.actions import OpaqueFunction
 
 def is_sim(context: LaunchContext, launchConfig):
     value = context.perform_substitution(launchConfig)  
-    if(value.find('sim') > 0):
-        sim_or_real_str = 'loading config for sim robot'
-        controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller.yaml')
-        bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt.yaml') 
-        recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery.yaml')
-        cmd_vel_remapping = '/diffbot_base_controller/cmd_vel_unstamped'
-    else:
+    if(value == 'real'):
         sim_or_real_str = 'loading config_realrobot for real robot'
         controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller_realrobot.yaml')
         bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt_realrobot.yaml')      
         recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery_realrobot.yaml')
         cmd_vel_remapping = '/cmd_vel'
+    else:
+        sim_or_real_str = 'loading config for sim robot'
+        controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller.yaml')
+        bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt.yaml') 
+        recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery.yaml')
+        cmd_vel_remapping = '/diffbot_base_controller/cmd_vel_unstamped'
+
     return  [LogInfo(msg=sim_or_real_str),
         Node(
             package='nav2_controller',
@@ -48,7 +49,7 @@ def is_sim(context: LaunchContext, launchConfig):
 
 def generate_launch_description():
     
-    real_or_sim = LaunchConfiguration('map_file')
+    real_or_sim = LaunchConfiguration('env_type')
 
     planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'planner_server.yaml')
     
@@ -73,7 +74,7 @@ def generate_launch_description():
     )
     
     return LaunchDescription([   
-        DeclareLaunchArgument('map_file', default_value='warehouse_map_sim.yaml'),  
+        DeclareLaunchArgument('env_type', default_value='sim'),  
         OpaqueFunction(function=is_sim, args=[real_or_sim]),
 
         Node(

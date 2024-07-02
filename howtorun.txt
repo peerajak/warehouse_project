@@ -9,7 +9,7 @@ source ~/sim_ws/install/setup.bash
 ros2 launch the_construct_office_gazebo warehouse_rb1.launch.xml
 
 - Terminal 2
-ros2 launch cartographer_slam cartographer.launch.py
+ros2 launch cartographer_slam cartographer.launch.py env_type:=sim
 
 - Terminal 3
 cd ros2_ws/src/warehouse_project
@@ -55,7 +55,8 @@ ros2 launch localization_server localization.launch.py map_file:=warehouse_map_s
 
 - Terminal 3
 ros2 launch path_planner_server pathplanner.launch.py 
-
+or
+ros2 launch path_planner_server pathplanner.launch.py env_type:=sim
 
 ------------------- Real Robot ------------------------------
 - To move robot
@@ -63,7 +64,7 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ------   Task1 Mapping  --------
 
 - Terminal 1
-ros2 launch cartographer_slam cartographer.launch.py
+ros2 launch cartographer_slam cartographer.launch.py env_type:=real
 
 - Terminal 2
 cd ros2_ws/src/warehouse_project
@@ -92,7 +93,7 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ros2 launch localization_server localization.launch.py map_file:=warehouse_map_real.yaml
 
 - Terminal 2
-ros2 launch path_planner_server pathplanner.launch.py map_file:=warehouse_map_real.yaml
+ros2 launch path_planner_server pathplanner.launch.py env_type:=real
 
 ------------------- View Frames ------------------------------
 ros2 run tf2_tools view_frames
