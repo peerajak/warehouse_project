@@ -8,7 +8,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     
-    nav2_yaml = os.path.join(get_package_share_directory('localization_server'), 'config', 'amcl_config.yaml')
+    nav2_yaml = os.path.join(get_package_share_directory('localization_server'), 'config', 'amcl_config_realrobot.yaml')
     map_file_name=[
                     PathJoinSubstitution(
                         [
@@ -58,5 +58,5 @@ def generate_launch_description():
                         {'autostart': True},
                         {'node_names': ['map_server', 'amcl']}]
         ),
-        rviz_node
+        #rviz_node
     ])
