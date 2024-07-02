@@ -9,6 +9,7 @@ Panels:
         - /RobotModel1
         - /RobotModel1/Description Topic1
         - /Map1
+        - /Map1/Status1
         - /Map1/Topic1
         - /LaserScan1
         - /LaserScan1/Topic1
@@ -18,8 +19,13 @@ Panels:
         - /PoseWithCovariance1/Topic1
         - /Path1
         - /Map2
+        - /Map2/Topic1
         - /Map3
-      Splitter Ratio: 0.779411792755127
+        - /Map3/Status1
+        - /Map3/Topic1
+        - /Map3/Update Topic1
+        - /Map3/Position1
+      Splitter Ratio: 0.4470134973526001
     Tree Height: 553
   - Class: rviz_common/Selection
     Name: Selection
@@ -90,22 +96,18 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         robot_evelator_base_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         robot_evelator_platform_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         robot_front_cover_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         robot_front_laser_base_link:
           Alpha: 1
           Show Axes: false
@@ -140,7 +142,6 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
       Mass Properties:
         Inertia: false
         Mass: false
@@ -323,8 +324,8 @@ Visualization Manager:
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
-      Line Style: Lines
-      Line Width: 0.029999999329447746
+      Line Style: Billboards
+      Line Width: 0.05000000074505806
       Name: Path
       Offset:
         X: 0
@@ -379,7 +380,7 @@ Visualization Manager:
         Value: /local_costmap/costmap
       Update Topic:
         Depth: 5
-        Durability Policy: Volatile
+        Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /local_costmap/costmap_updates

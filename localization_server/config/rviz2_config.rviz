@@ -85,22 +85,18 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         robot_evelator_base_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         robot_evelator_platform_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         robot_front_cover_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         robot_front_laser_base_link:
           Alpha: 1
           Show Axes: false
@@ -135,7 +131,6 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
       Mass Properties:
         Inertia: false
         Mass: false
@@ -149,8 +144,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        map:
-          Value: true
         odom:
           Value: true
         robot_base_docking_contact_link:
@@ -179,25 +172,24 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        map:
-          odom:
-            robot_base_footprint:
-              robot_base_link:
-                robot_evelator_base_link:
-                  {}
-                robot_front_cover_link:
-                  robot_base_docking_contact_link:
-                    {}
-                robot_front_laser_base_link:
-                  {}
-                robot_omni_backwheel_link:
-                  {}
-                robot_omni_front_leftwheel_link:
-                  {}
-                robot_omni_front_rightwheel_link:
-                  {}
-              robot_top_cover_link:
+        odom:
+          robot_base_footprint:
+            robot_base_link:
+              robot_evelator_base_link:
                 {}
+              robot_front_cover_link:
+                robot_base_docking_contact_link:
+                  {}
+              robot_front_laser_base_link:
+                {}
+              robot_omni_backwheel_link:
+                {}
+              robot_omni_front_leftwheel_link:
+                {}
+              robot_omni_front_rightwheel_link:
+                {}
+            robot_top_cover_link:
+              {}
       Update Interval: 0
       Value: true
     - Alpha: 0.699999988079071
@@ -207,7 +199,7 @@ Visualization Manager:
       Enabled: true
       Name: Map
       Topic:
-        Depth: 5
+        Depth: 10
         Durability Policy: Transient Local
         Filter size: 10
         History Policy: Keep Last
@@ -243,14 +235,14 @@ Visualization Manager:
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
+      Size (m): 0.05000000074505806
       Style: Flat Squares
       Topic:
         Depth: 5
         Durability Policy: Volatile
         Filter size: 10
         History Policy: Keep Last
-        Reliability Policy: Reliable
+        Reliability Policy: Best Effort
         Value: /scan
       Use Fixed Frame: true
       Use rainbow: true
@@ -317,7 +309,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 7.1896820068359375
+      Distance: 8.510370254516602
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
