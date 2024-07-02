@@ -1,14 +1,57 @@
 import os
 from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription
+from launch import LaunchDescription, LaunchContext
 from launch_ros.actions import Node
+from launch.actions import LogInfo,DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+from launch.actions import OpaqueFunction
+
+def is_sim(context: LaunchContext, launchConfig):
+    value = context.perform_substitution(launchConfig)  
+    if(value.find('sim') > 0):
+        sim_or_real_str = 'loading config for sim robot'
+        controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller.yaml')
+        bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt.yaml') 
+        recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery.yaml')
+        cmd_vel_remapping = '/diffbot_base_controller/cmd_vel_unstamped'
+    else:
+        sim_or_real_str = 'loading config_realrobot for real robot'
+        controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller_realrobot.yaml')
+        bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt_realrobot.yaml')      
+        recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery_realrobot.yaml')
+        cmd_vel_remapping = '/cmd_vel'
+    return  [LogInfo(msg=sim_or_real_str),
+        Node(
+            package='nav2_controller',
+            executable='controller_server',
+            name='controller_server',
+            output='screen',
+            parameters=[controller_yaml],
+            remappings=[('/cmd_vel', cmd_vel_remapping),
+        ]),
+                    
+        Node(
+            package='nav2_behaviors',
+            executable='behavior_server',
+            name='behavior_server',
+            parameters=[recovery_yaml],
+            output='screen'),
+
+        Node(
+            package='nav2_bt_navigator',
+            executable='bt_navigator',
+            name='bt_navigator',
+            output='screen',
+            parameters=[bt_navigator_yaml]),
+        
+        ]
 
 def generate_launch_description():
+    
+    real_or_sim = LaunchConfiguration('map_file')
 
-    controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller.yaml')
-    bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt.yaml')
     planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'planner_server.yaml')
-    recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery.yaml')
+    
     # RVIZ Configuration
     package_description = "path_planner_server"
     rviz_config_dir = os.path.join(get_package_share_directory(package_description), 'config', 'pathplanning.rviz')
@@ -29,15 +72,9 @@ def generate_launch_description():
         arguments=['0', '0', '0', '0', '0', '0', 'robot_base_link', 'base_link']
     )
     
-    return LaunchDescription([     
-        Node(
-            package='nav2_controller',
-            executable='controller_server',
-            name='controller_server',
-            output='screen',
-            parameters=[controller_yaml],
-            remappings=[('/cmd_vel', '/diffbot_base_controller/cmd_vel_unstamped'),
-        ]),
+    return LaunchDescription([   
+        DeclareLaunchArgument('map_file', default_value='warehouse_map_sim.yaml'),  
+        OpaqueFunction(function=is_sim, args=[real_or_sim]),
 
         Node(
             package='nav2_planner',
@@ -45,20 +82,7 @@ def generate_launch_description():
             name='planner_server',
             output='screen',
             parameters=[planner_yaml]),
-            
-        Node(
-            package='nav2_behaviors',
-            executable='behavior_server',
-            name='behavior_server',
-            parameters=[recovery_yaml],
-            output='screen'),
 
-        Node(
-            package='nav2_bt_navigator',
-            executable='bt_navigator',
-            name='bt_navigator',
-            output='screen',
-            parameters=[bt_navigator_yaml]),
 
         Node(
             package='nav2_lifecycle_manager',

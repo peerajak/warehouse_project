@@ -89,10 +89,10 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 
 ----- Task 3 Navigation --------
 - Terminal 1
-ros2 launch localization_server localization_realrobot.launch.py map_file:=warehouse_map_real.yaml
+ros2 launch localization_server localization.launch.py map_file:=warehouse_map_real.yaml
 
 - Terminal 2
-ros2 launch path_planner_server pathplanner_realrobot.launch.py 
+ros2 launch path_planner_server pathplanner.launch.py map_file:=warehouse_map_real.yaml
 
 ------------------- View Frames ------------------------------
 ros2 run tf2_tools view_frames
