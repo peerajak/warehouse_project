@@ -17,7 +17,7 @@ def generate_launch_description():
             executable='rviz2',
             output='screen',
             name='rviz_node',
-            parameters=[{'use_sim_time': True}],
+            parameters=[{'use_sim_time': False}],
             arguments=['-d', rviz_config_dir])
     # Static TF Broadcaster 
     static_tf_pub = Node(

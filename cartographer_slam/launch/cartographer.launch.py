@@ -21,8 +21,8 @@ def is_sim(context: LaunchContext, launchConfig):
         configuration_basename = 'cartographer_realrobot.lua'
         rviz_config_dir = os.path.join(get_package_share_directory(package_description), 'config', 'rviz2_config_realrobot.rviz')
     else:
-        bool_use_sim_time = True
         sim_or_real_str = 'loading config for sim robot'
+        bool_use_sim_time = True
         configuration_basename = 'cartographer.lua'
         rviz_config_dir = os.path.join(get_package_share_directory(package_description), 'config', 'rviz2_config.rviz')
 

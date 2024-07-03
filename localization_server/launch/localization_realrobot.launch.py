@@ -29,7 +29,7 @@ def generate_launch_description():
             executable='rviz2',
             output='screen',
             name='rviz_node',
-            parameters=[{'use_sim_time': True}],
+            parameters=[{'use_sim_time': False}],
             arguments=['-d', rviz_config_dir])
     return LaunchDescription([
         Node(
@@ -37,7 +37,7 @@ def generate_launch_description():
             executable='map_server',
             name='map_server',
             output='screen',
-            parameters=[{'use_sim_time': True}, 
+            parameters=[{'use_sim_time': False}, 
                         {'yaml_filename':map_file_name}]
         ),
             
@@ -54,7 +54,7 @@ def generate_launch_description():
             executable='lifecycle_manager',
             name='lifecycle_manager_localization',
             output='screen',
-            parameters=[{'use_sim_time': True},
+            parameters=[{'use_sim_time': False},
                         {'autostart': True},
                         {'node_names': ['map_server', 'amcl']}]
         ),
