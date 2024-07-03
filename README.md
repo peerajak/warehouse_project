@@ -4,7 +4,7 @@
 
 ### Simulation
 Result
-![alt text](warehouse_map_sim.pgm)
+![alt text](warehouse_map_sim.jpg)
 - Terminal 1
 source ~/sim_ws/install/setup.bash
 ros2 launch the_construct_office_gazebo warehouse_rb1.launch.xml
@@ -21,7 +21,7 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args  -r cmd_vel:=/di
 
 ### Real Robot
 Result
-![alt text](warehouse_map_real.pgm)
+![alt text](warehouse_map_real.jpg)
 - Terminal 1
 ros2 launch cartographer_slam cartographer.launch.py env_type:=real
 
@@ -73,7 +73,7 @@ ros2 launch path_planner_server pathplanner.launch.py env_type:=sim
 
 ### Real Robot
 Result 
-![alt text](real_robot_2.png)
+![alt text](realrobot_2.png)
 ![alt text](real_robot22.png)
 ![alt text](real_robot3.png)
 ![alt text](real_robot33.png)
