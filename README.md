@@ -74,12 +74,12 @@ ros2 launch path_planner_server pathplanner.launch.py env_type:=sim
 ### Real Robot
 Result 
 ![alt text](real_robot_2.png)
-![alt text](real_robot_22.png)
-![alt text](real_robot_3.png)
-![alt text](real_robot_33.png)
-![alt text](real_robot_4.png)
-![alt text](real_robot_44.png)
-![alt text](real_robot_444.png)
+![alt text](real_robot22.png)
+![alt text](real_robot3.png)
+![alt text](real_robot33.png)
+![alt text](real_robot4.png)
+![alt text](real_robot44.png)
+![alt text](real_robot444.png)
 
 - Terminal 1
 ros2 launch localization_server localization.launch.py map_file:=warehouse_map_real.yaml
