@@ -96,6 +96,6 @@ def generate_launch_description():
                                         'behavior_server',
                                         'bt_navigator']}]),
         static_tf_pub,
-        rviz_node
+        #rviz_node
         
     ])

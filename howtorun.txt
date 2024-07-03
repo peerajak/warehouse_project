@@ -66,9 +66,9 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 - Terminal 1
 ros2 launch cartographer_slam cartographer.launch.py env_type:=real
 
-- Terminal 2
-cd ros2_ws/src/warehouse_project
-rviz2 -d cartographer_slam/config/rviz2_config.rviz
+#- Terminal 2 //Added rviz inside launch file 
+#cd ros2_ws/src/warehouse_project
+#rviz2 -d cartographer_slam/config/rviz2_config_realrobot.rviz
 
 - Terminal 3
 ros2 run teleop_twist_keyboard teleop_twist_keyboard 
@@ -77,13 +77,11 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 - Terminal 1
 ros2 launch map_server map_server.launch.py map_file:=warehouse_map_real.yaml
 
-- Terminal 2 (during development)
-cd ros2_ws/src/warehouse_project/
-rviz2 -d cartographer_slam/config/rviz2_config.rviz
+
 
 ------ Task 2 Localization ---------
 - Terminal 1
-ros2 launch localization_server localization_realrobot.launch.py map_file:=warehouse_map_real.yaml
+ros2 launch localization_server localization.launch.py map_file:=warehouse_map_real.yaml
 
 - Terminal 2
 ros2 run teleop_twist_keyboard teleop_twist_keyboard 
