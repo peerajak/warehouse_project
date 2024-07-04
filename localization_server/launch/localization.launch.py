@@ -52,14 +52,14 @@ def is_sim(context: LaunchContext, launchConfig):
                 executable='map_server',
                 name='map_server',
                 output='screen',
-                parameters=[{'use_sim_time': True}, 
+                parameters=[{'use_sim_time': bool_use_sim_time}, 
                             {'yaml_filename':map_file_name}]),
             Node(
                 package='nav2_lifecycle_manager',
                 executable='lifecycle_manager',
                 name='lifecycle_manager_localization',
                 output='screen',
-                parameters=[{'use_sim_time': True},
+                parameters=[{'use_sim_time': bool_use_sim_time},
                             {'autostart': True},
                             {'node_names': ['map_server', 'amcl']}])
             ]
