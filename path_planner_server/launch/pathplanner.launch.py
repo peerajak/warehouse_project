@@ -57,7 +57,6 @@ def is_sim(context: LaunchContext, launchConfig):
             name='planner_server',
             output='screen',
             parameters=[planner_yaml]),
-        
     #  Node(
     #         package='rviz2',
     #         executable='rviz2',
@@ -92,5 +91,25 @@ def generate_launch_description():
                                         'controller_server',
                                         'behavior_server',
                                         'bt_navigator']}]),
-        static_tf_pub,        
+        static_tf_pub,   
+        DeclareLaunchArgument('obstacle', default_value='0.0'),
+        DeclareLaunchArgument('degrees', default_value='-90.0'),
+        DeclareLaunchArgument('final_approach', default_value='false'),
+        LogInfo(
+            msg=LaunchConfiguration('obstacle')),
+        LogInfo(
+            msg=LaunchConfiguration('degrees')),
+        LogInfo(
+            msg=LaunchConfiguration('final_approach')),
+        # All the arguments have to be strings. Floats will give an error of NonItreable.
+
+        Node(
+        package='path_planner_server',
+        executable='approach_service_server_node',
+        output='screen',
+        emulate_tty=True,
+        arguments=["-obstacle", LaunchConfiguration(
+                'obstacle')
+            ]
+        )     
     ])
