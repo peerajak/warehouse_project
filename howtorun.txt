@@ -99,20 +99,20 @@
 
 CHECKPOINT 12
     ------------------- Simulation ------------------------------
-    - Terminal 1
-    source ~/sim_ws/install/setup.bash
-    ros2 launch the_construct_office_gazebo warehouse_rb1.launch.xml
+- Terminal 1
+source ~/sim_ws/install/setup.bash
+ros2 launch the_construct_office_gazebo warehouse_rb1.launch.xml
 
-    - Terminal 2
-    ros2 launch localization_server localization.launch.py map_file:=warehouse_map_sim.yaml
+- Terminal 2
+ros2 launch localization_server localization.launch.py map_file:=warehouse_map_sim.yaml
 
-    - Terminal 3
-    ros2 launch path_planner_server pathplanner.launch.py 
-    or
-    ros2 launch path_planner_server pathplanner.launch.py env_type:=sim
+- Terminal 3
+ros2 launch path_planner_server pathplanner.launch.py 
+or
+ros2 launch path_planner_server pathplanner.launch.py env_type:=sim
 
-    - Terminal 4
-    python3 ~/ros2_ws/src/warehouse_project/nav2_apps/scripts/move_shelf_to_ship.py
+- Terminal 4
+python3 ~/ros2_ws/src/warehouse_project/nav2_apps/scripts/move_shelf_to_ship_1.py
 
 
 
