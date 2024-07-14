@@ -292,6 +292,7 @@ private:
   rclcpp::CallbackGroup::SharedPtr callback_group_3_laser;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
       subscription_3_laser;
+  const double precision_threshold = 0.05;
 
   //--------4. Service related -----------//
   rclcpp::CallbackGroup::SharedPtr callback_group_4_service;
@@ -639,12 +640,12 @@ private:
             //double magnitude_of_ttt_linear = magnitude_of_vector(ttt.transform.translation.x,ttt.transform.translation.y);
             ling.linear.x = scaleForwardSpeed *  ttt.transform.translation.x;
             ling.linear.y = 0;
-            if(abs(ttt.transform.translation.x) < 0.01){
+            if(abs(ttt.transform.translation.x) <= precision_threshold){
                double target_yaw_rad = yaw_theta_from_quaternion(
                 ttt.transform.rotation.x, ttt.transform.rotation.y,
                 ttt.transform.rotation.z, ttt.transform.rotation.w);
                ling.angular.z = scaleRotationRate*target_yaw_rad;  
-               if(abs(ttt.transform.translation.x) < 0.01 && target_yaw_rad <0.05){
+               if(abs(ttt.transform.translation.x) < precision_threshold && target_yaw_rad <precision_threshold){
                   nstate = approach_shelf2;
                }            
            } else {
@@ -723,7 +724,7 @@ private:
                  current_pos_.x, current_pos_.y); 
           RCLCPP_INFO(this->get_logger(), "k_point_in_odom_coordinates position in odom cooordinate x: %f, y: %f",
          k_point_in_odom_coordinates.getX(),k_point_in_odom_coordinates.getY());  
-            if(abs(ttt2.transform.translation.x) < 0.05){
+            if(abs(ttt2.transform.translation.x) <= precision_threshold){
             ling.linear.x = 0;
             ling.linear.y = 0;
             ling.linear.z = 0;

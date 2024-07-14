@@ -13,7 +13,7 @@ def is_sim(context: LaunchContext, launchConfig):
     # rviz_config_dir = os.path.join(get_package_share_directory(package_description), 'config', 'pathplanning.rviz')
     if(value == 'real'):
         sim_or_real_str = 'loading config_realrobot for real robot'
-        #bool_use_sim_time = False
+        bool_use_sim_time = False
         controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller_realrobot.yaml')
         bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt_realrobot.yaml')      
         recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery_realrobot.yaml')
@@ -21,7 +21,7 @@ def is_sim(context: LaunchContext, launchConfig):
         cmd_vel_remapping = '/cmd_vel'
     else:
         sim_or_real_str = 'loading config for sim robot'
-        #bool_use_sim_time = True
+        bool_use_sim_time = True
         controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller.yaml')
         bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt.yaml') 
         recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery.yaml')
@@ -57,6 +57,36 @@ def is_sim(context: LaunchContext, launchConfig):
             name='planner_server',
             output='screen',
             parameters=[planner_yaml]),
+        Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager_pathplanner',
+            output='screen',
+            parameters=[{'use_sim_time': bool_use_sim_time},
+                        {'autostart': True},
+                        {'node_names': ['planner_server',
+                                        'controller_server',
+                                        'behavior_server',
+                                        'bt_navigator'
+                                        ]}]),
+        DeclareLaunchArgument('obstacle', default_value='0.5'),
+        DeclareLaunchArgument('degrees', default_value='-90'),
+        DeclareLaunchArgument('final_approach', default_value='false'),
+        LogInfo(
+            msg=LaunchConfiguration('obstacle')),
+        LogInfo(
+            msg=LaunchConfiguration('degrees')),
+        LogInfo(
+            msg=LaunchConfiguration('final_approach')),
+        Node(
+        package='path_planner_server',
+        executable='approach_service_server_node',
+        output='screen',
+        emulate_tty=True,
+        arguments=["-obstacle", LaunchConfiguration(
+                'obstacle') ],
+        remappings=[('/cmd_vel', cmd_vel_remapping),]
+        )   
     #  Node(
     #         package='rviz2',
     #         executable='rviz2',
@@ -77,39 +107,10 @@ def generate_launch_description():
         emulate_tty=True,
         arguments=['0', '0', '0', '0', '0', '0', 'robot_base_link', 'base_link']
     )
-    cmd_vel_remapping = '/diffbot_base_controller/cmd_vel_unstamped'
-    return LaunchDescription([   
+    #cmd_vel_remapping = '/diffbot_base_controller/cmd_vel_unstamped'
+    return LaunchDescription([ 
+        static_tf_pub,    
         DeclareLaunchArgument('env_type', default_value='sim'),  
         OpaqueFunction(function=is_sim, args=[real_or_sim]),
-        Node(
-            package='nav2_lifecycle_manager',
-            executable='lifecycle_manager',
-            name='lifecycle_manager_pathplanner',
-            output='screen',
-            parameters=[{'autostart': True},
-                        {'node_names': ['planner_server',
-                                        'controller_server',
-                                        'behavior_server',
-                                        'bt_navigator']}]),
-        static_tf_pub,   
-        DeclareLaunchArgument('obstacle', default_value='0.5'),
-        DeclareLaunchArgument('degrees', default_value='-90'),
-        DeclareLaunchArgument('final_approach', default_value='false'),
-        LogInfo(
-            msg=LaunchConfiguration('obstacle')),
-        LogInfo(
-            msg=LaunchConfiguration('degrees')),
-        LogInfo(
-            msg=LaunchConfiguration('final_approach')),
-        # All the arguments have to be strings. Floats will give an error of NonItreable.
-
-        Node(
-        package='path_planner_server',
-        executable='approach_service_server_node',
-        output='screen',
-        emulate_tty=True,
-        arguments=["-obstacle", LaunchConfiguration(
-                'obstacle') ],
-        remappings=[('/cmd_vel', cmd_vel_remapping),]
-        )     
+ 
     ])

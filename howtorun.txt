@@ -117,6 +117,12 @@ ros2 launch path_planner_server pathplanner.launch.py env_type:=sim
 - Terminal 4
 python3 ~/ros2_ws/src/warehouse_project/nav2_apps/scripts/move_shelf_to_ship_1.py
 
+Lifecycle manager by CLI
+pause node
+ros2 service call /lifecycle_manager_pathplanner/manage_nodes  nav2_msgs/srv/ManageLifecycleNodes command:\ 1\
+resume node 
+ros2 service call /lifecycle_manager_pathplanner/manage_nodes  nav2_msgs/srv/ManageLifecycleNodes command:\ 2\
+
 
 
 

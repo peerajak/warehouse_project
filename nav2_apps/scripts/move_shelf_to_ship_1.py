@@ -19,12 +19,16 @@ from copy import deepcopy
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
 from custom_interfaces.srv import GoToLoading
+from nav2_msgs.srv import ManageLifecycleNodes
 from rclpy.duration import Duration
 from rclpy.task import Future
 from rclpy.node import Node
 import rclpy
 
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+
+nstates = ['ToPreload', 'AttachShelf', 'ToShipping','EndProgramSuccess', 'EndProgramFailure']
+nstate = nstates[0]
 
 # Shelf positions for picking
 shelf_positions = {
@@ -44,11 +48,12 @@ and at the pallet jack to remove it
 class ServiceClient(Node):
   def __init__(self):
     super().__init__('service_client')
-    my_callback_group = rclpy.callback_groups.ReentrantCallbackGroup()
+    my_callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
     self.service_client = self.create_client(
             srv_type=GoToLoading,
             srv_name="/approach_shelf",
             callback_group=my_callback_group)
+
     self.future: Future = None
     self.final_approach = True
 
@@ -69,6 +74,7 @@ class ServiceClient(Node):
     self.timer.cancel()
 
   def response_callback(self, future: Future):
+    global nstate
     response = future.result()
     if response is not None:
         #self.get_logger().info("Some Response happened")
@@ -76,16 +82,58 @@ class ServiceClient(Node):
             self.get_logger().info("response from service server: Success!")
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
+            nstate = nstates[2]
+            rclpy.shutdown()
         else:
             self.get_logger().info("response from service server: Failed!")
+            nstate = nstates[4]
+            rclpy.shutdown()
+    else:
+        self.get_logger().info("The response is None")
+    
+
+class LifecycleServiceClient(Node):
+  def __init__(self):
+    super().__init__('lifecycle_service_client')
+    my_callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
+    self.service_client = self.create_client(
+            srv_type=ManageLifecycleNodes,
+            srv_name="/lifecycle_manager_pathplanner/manage_nodes",
+            callback_group=my_callback_group)
+
+    self.future: Future = None
+    timer_period: float = 1.0
+    self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
+
+  def timer_callback(self):  
+    while not self.service_client.wait_for_service(timeout_sec=1.0):
+        self.get_logger().info(f'service {self.service_client.srv_name} not available, waiting...')
+    request = ManageLifecycleNodes.Request()
+    request.command = 1 # Pause the lifecycle manager for pathplanner
+    self.future = self.service_client.call_async(request)
+    self.future.add_done_callback(self.response_callback)
+    self.timer.cancel()
+
+  def response_callback(self, future: Future):
+    global nstate
+    response = future.result()
+    if response is not None:
+        #self.get_logger().info("Some Response happened")
+        if(response.success):
+            self.get_logger().info("response from lifecycle service server: Success!")
+            msgs_empty = String()
+            self.publisher_lift.publish(msgs_empty)
+            nstate = nstates[2]
+            rclpy.shutdown()
+        else:
+            self.get_logger().info("response from lifecycle service server: Failed!")
+            nstate = nstates[4]
+            rclpy.shutdown()
     else:
         self.get_logger().info("The response is None")
 
-
-
-
-
 def main():
+    global nstate
     # Recieved virtual request for picking item at Shelf A and bringing to
     # worker at the pallet jack 7 for shipping. This request would
     # contain the shelf ID ("shelf_A") and shipping destination ("pallet_jack7")
@@ -137,27 +185,65 @@ def main():
     result = navigator.getResult()
     if result == TaskResult.SUCCEEDED:
         print('Success')
+        nstate = nstates[1]
 
     elif result == TaskResult.CANCELED:
         print('Task at ' + request_item_location +
               ' was canceled. Returning to staging point...')
         initial_pose.header.stamp = navigator.get_clock().now().to_msg()
         navigator.goToPose(initial_pose)
+        nstate = nstates[4]
 
     elif result == TaskResult.FAILED:
         print('Task at ' + request_item_location + ' failed!')
-        exit(-1)
+        nstate = nstates[4]
+
 
     while not navigator.isTaskComplete():
         pass
 
-    executor = rclpy.executors.Executor()    
+    executor = rclpy.executors.MultiThreadedExecutor()   
     service_client_node = ServiceClient()
+    lifecycle_service_client_node = LifecycleServiceClient()
     executor.add_node(service_client_node)
+    # TODO add new lifecycle_service client
+    # - remove service_client_node
+    # - create lifecycle_service_client class
+    #    - pause lifecycle manager of path planner
+    #    - swap config files
+    #    - restart lifecycle manager of path planner with new config files
+    # - add lifecycle_service_client instance
+    ####
+
+    work_finish = False
+    state2_firsttime = True
+    while(rclpy.ok and not work_finish):
+        if nstate == nstates[1]:#'AttachShelf'
+            print('state changed to '+nstate)
+            # if not service_client_node.future is None:
+            #     executor.spin_until_future_complete(service_client_node.future)
+            # else:
+        #     executor.spin_once()
+            executor.spin()
+            if nstate != nstate[1]:
+                executor.remove_node(service_client_node)
+        elif nstate == nstates[2]:#'ToShipping'            
+            print('state changed to '+nstate)
+            if state2_firsttime:
+                executor.add_node(lifecycle_service_client_node)
+            executor.spin()
+            if nstate != nstate[2]:
+                executor.remove_node(lifecycle_service_client_node)
+        elif nstate == nstates[3]:#'EndProgramSuccess'
+            print('state changed to '+nstate)
+            print('End Program 0')
+            exit(0)
+        else: #'EndProgramFailure'
+            print('state changed to '+nstate)
+            print('End Program -1')
+            exit(-1)
 
 
-  
-    rclpy.spin(service_client_node)
 
     exit(0)
 
