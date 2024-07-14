@@ -17,7 +17,7 @@ import time
 from copy import deepcopy
 
 from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Empty
+from std_msgs.msg import String
 from custom_interfaces.srv import GoToLoading
 from rclpy.duration import Duration
 from rclpy.task import Future
@@ -50,12 +50,12 @@ class ServiceClient(Node):
             srv_name="/approach_shelf",
             callback_group=my_callback_group)
     self.future: Future = None
-    self.final_approach = False
+    self.final_approach = True
 
     timer_period: float = 1.0
     self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
     self.publisher_lift = self.create_publisher(
-            msg_type=Empty,
+            msg_type=String,
             topic='/elevator_up',
             qos_profile=1)
 
@@ -74,7 +74,7 @@ class ServiceClient(Node):
         #self.get_logger().info("Some Response happened")
         if(response.complete):
             self.get_logger().info("response from service server: Success!")
-            msgs_empty = Empty()
+            msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
         else:
             self.get_logger().info("response from service server: Failed!")
@@ -156,7 +156,7 @@ def main():
     executor.add_node(service_client_node)
 
 
-
+  
     rclpy.spin(service_client_node)
 
     exit(0)

@@ -77,7 +77,7 @@ def generate_launch_description():
         emulate_tty=True,
         arguments=['0', '0', '0', '0', '0', '0', 'robot_base_link', 'base_link']
     )
-    
+    cmd_vel_remapping = '/diffbot_base_controller/cmd_vel_unstamped'
     return LaunchDescription([   
         DeclareLaunchArgument('env_type', default_value='sim'),  
         OpaqueFunction(function=is_sim, args=[real_or_sim]),
@@ -92,8 +92,8 @@ def generate_launch_description():
                                         'behavior_server',
                                         'bt_navigator']}]),
         static_tf_pub,   
-        DeclareLaunchArgument('obstacle', default_value='0.0'),
-        DeclareLaunchArgument('degrees', default_value='-90.0'),
+        DeclareLaunchArgument('obstacle', default_value='0.5'),
+        DeclareLaunchArgument('degrees', default_value='-90'),
         DeclareLaunchArgument('final_approach', default_value='false'),
         LogInfo(
             msg=LaunchConfiguration('obstacle')),
@@ -109,7 +109,7 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
         arguments=["-obstacle", LaunchConfiguration(
-                'obstacle')
-            ]
+                'obstacle') ],
+        remappings=[('/cmd_vel', cmd_vel_remapping),]
         )     
     ])

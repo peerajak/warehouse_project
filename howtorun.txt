@@ -98,7 +98,10 @@
     ros2 run tf2_tools view_frames
 
 CHECKPOINT 12
+
     ------------------- Simulation ------------------------------
+Lifting the cart with CLI
+ros2 topic pub /elevator_up std_msgs/msg/String data:\ \'\'\ 
 - Terminal 1
 source ~/sim_ws/install/setup.bash
 ros2 launch the_construct_office_gazebo warehouse_rb1.launch.xml

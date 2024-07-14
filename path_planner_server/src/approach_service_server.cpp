@@ -181,7 +181,7 @@ public:
         100ms, std::bind(&MidLegsTFService::timer1_callback, this),
         callback_group_1_timer);
     publisher_1_twist =
-        this->create_publisher<geometry_msgs::msg::Twist>("robot/cmd_vel", 10);
+        this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
     tf_buffer_move_robot1 = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_move_robot1 = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_move_robot1 );
     tf_buffer_move_robot2 = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -514,14 +514,14 @@ private:
         tf2::Quaternion q_cart_laser;
         q_cart_laser.setRPY(cart_roll_laser, cart_pitch_laser, cart_yaw_laser);
 
-        // --------- TF2 Calculation of Laser Position w.r.t robot_odom
+        // --------- TF2 Calculation of Laser Position w.r.t odom
         // Coordinate
         // ------------//
 
         geometry_msgs::msg::TransformStamped tf_laser_to_odom;
         rclcpp::Time now = this->get_clock()->now();
         std::string fromFrame = "robot_front_laser_base_link";
-        std::string toFrame = "robot_odom";
+        std::string toFrame = "odom";
         try {
           tf_laser_to_odom = tf_buffer_->lookupTransform(toFrame, fromFrame,
                                                          tf2::TimePointZero);
@@ -548,9 +548,9 @@ private:
             transform * point_in_laser_coordinates;
         tf2::Quaternion q_cart_robotodom = transform * q_cart_laser;
 
-        //------------ broadcast TF cart to robot_odom
+        //------------ broadcast TF cart to odom
 
-        std::string fromFrameRel = "robot_odom";
+        std::string fromFrameRel = "odom";
         std::string toFrameRel = "cart_frame";
         geometry_msgs::msg::TransformStamped trans;
         rclcpp::Time now2 = this->get_clock()->now();
@@ -723,7 +723,7 @@ private:
                  current_pos_.x, current_pos_.y); 
           RCLCPP_INFO(this->get_logger(), "k_point_in_odom_coordinates position in odom cooordinate x: %f, y: %f",
          k_point_in_odom_coordinates.getX(),k_point_in_odom_coordinates.getY());  
-            if(abs(ttt2.transform.translation.x) < 0.008){
+            if(abs(ttt2.transform.translation.x) < 0.05){
             ling.linear.x = 0;
             ling.linear.y = 0;
             ling.linear.z = 0;
