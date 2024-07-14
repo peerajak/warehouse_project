@@ -48,6 +48,7 @@ and at the pallet jack to remove it
 class ServiceClient(Node):
   def __init__(self):
     super().__init__('service_client')
+    self.get_logger().info('init service_client')
     my_callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
     self.service_client = self.create_client(
             srv_type=GoToLoading,
@@ -64,7 +65,8 @@ class ServiceClient(Node):
             topic='/elevator_up',
             qos_profile=1)
 
-  def timer_callback(self):  
+  def timer_callback(self): 
+    self.get_logger().info('timer_callback service_client') 
     while not self.service_client.wait_for_service(timeout_sec=1.0):
         self.get_logger().info(f'service {self.service_client.srv_name} not available, waiting...')
     request = GoToLoading.Request()
@@ -95,6 +97,7 @@ class ServiceClient(Node):
 class LifecycleServiceClient(Node):
   def __init__(self):
     super().__init__('lifecycle_service_client')
+    self.get_logger().info('init lifecycle_service_client')
     my_callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
     self.service_client = self.create_client(
             srv_type=ManageLifecycleNodes,
@@ -106,6 +109,7 @@ class LifecycleServiceClient(Node):
     self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
 
   def timer_callback(self):  
+    self.get_logger().info('timer_callback lifecycle_service_client')
     while not self.service_client.wait_for_service(timeout_sec=1.0):
         self.get_logger().info(f'service {self.service_client.srv_name} not available, waiting...')
     request = ManageLifecycleNodes.Request()
@@ -123,7 +127,7 @@ class LifecycleServiceClient(Node):
             self.get_logger().info("response from lifecycle service server: Success!")
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
-            nstate = nstates[2]
+            nstate = nstates[3]
             rclpy.shutdown()
         else:
             self.get_logger().info("response from lifecycle service server: Failed!")
@@ -142,7 +146,7 @@ def main():
     request_destination = 'shipping'
     ####################
 
-    rclpy.init()
+
 
     navigator = BasicNavigator()
 
@@ -202,10 +206,30 @@ def main():
     while not navigator.isTaskComplete():
         pass
 
-    executor = rclpy.executors.MultiThreadedExecutor()   
-    service_client_node = ServiceClient()
+
+
+# Tomorrow I will combine 2 nodes to become one node, but with 2 services.
+
+
+
+
+if __name__ == '__main__':
+    rclpy.init()
+    main()
+    executor = rclpy.executors.MultiThreadedExecutor()
+    service_client_node = ServiceClient()    
+    executor.add_node(service_client_node )
+    executor.spin()
+    service_client_node.destroy_node()
+    rclpy.shutdown()
+
+    rclpy.init()
+    executor = rclpy.executors.MultiThreadedExecutor()
     lifecycle_service_client_node = LifecycleServiceClient()
-    executor.add_node(service_client_node)
+    executor.add_node(lifecycle_service_client_node)
+    executor.spin()
+    lifecycle_service_client_node.destroy_node()
+    rclpy.shutdown()
     # TODO add new lifecycle_service client
     # - remove service_client_node
     # - create lifecycle_service_client class
@@ -217,36 +241,30 @@ def main():
 
     work_finish = False
     state2_firsttime = True
-    while(rclpy.ok and not work_finish):
-        if nstate == nstates[1]:#'AttachShelf'
-            print('state changed to '+nstate)
-            # if not service_client_node.future is None:
-            #     executor.spin_until_future_complete(service_client_node.future)
-            # else:
-        #     executor.spin_once()
-            executor.spin()
-            if nstate != nstate[1]:
-                executor.remove_node(service_client_node)
-        elif nstate == nstates[2]:#'ToShipping'            
-            print('state changed to '+nstate)
-            if state2_firsttime:
-                executor.add_node(lifecycle_service_client_node)
-            executor.spin()
-            if nstate != nstate[2]:
-                executor.remove_node(lifecycle_service_client_node)
-        elif nstate == nstates[3]:#'EndProgramSuccess'
-            print('state changed to '+nstate)
-            print('End Program 0')
-            exit(0)
-        else: #'EndProgramFailure'
-            print('state changed to '+nstate)
-            print('End Program -1')
-            exit(-1)
 
-
-
-    exit(0)
-
-
-if __name__ == '__main__':
-    main()
+    # while(rclpy.ok and not work_finish):
+    #     time.sleep(10)
+    #     if nstate == nstates[1]:#'AttachShelf'
+    #         print('state changed to '+nstate)
+    #         executor.spin()
+    #         if nstate != nstate[1]:
+    #             print('remove service_client_node')
+    #             executor.remove_node(service_client_node)
+    #     elif nstate == nstates[2]:#'ToShipping'            
+    #         print('state changed to '+nstate)
+    #         if state2_firsttime:
+    #             print('add lifecycle_service_client_node')
+    #             executor.add_node(lifecycle_service_client_node)
+    #             print('spin lifecycle_service_client_node')
+    #         executor.spin()
+    #         state2_firsttime = False
+    #         if nstate != nstate[2]:
+    #             executor.remove_node(lifecycle_service_client_node)
+    #     elif nstate == nstates[3]:#'EndProgramSuccess'
+    #         print('state changed to '+nstate)
+    #         print('End Program 0')
+    #         exit(0)
+    #     else: #'EndProgramFailure'
+    #         print('state changed to '+nstate)
+    #         print('End Program -1')
+    #         exit(-1)
