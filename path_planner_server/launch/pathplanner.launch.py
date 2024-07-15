@@ -26,6 +26,7 @@ def is_sim(context: LaunchContext, launchConfig):
         bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt.yaml') 
         recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery.yaml')
         planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'planner_server.yaml')
+        filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'filter.yaml')
         cmd_vel_remapping = '/diffbot_base_controller/cmd_vel_unstamped'
 
     return  [LogInfo(msg=sim_or_real_str),
@@ -67,7 +68,9 @@ def is_sim(context: LaunchContext, launchConfig):
                         {'node_names': ['planner_server',
                                         'controller_server',
                                         'behavior_server',
-                                        'bt_navigator'
+                                        'bt_navigator',
+                                        'filter_mask_server',
+                                        'costmap_filter_info_server'
                                         ]}]),
         DeclareLaunchArgument('obstacle', default_value='0.5'),
         DeclareLaunchArgument('degrees', default_value='-90'),
@@ -86,7 +89,22 @@ def is_sim(context: LaunchContext, launchConfig):
         arguments=["-obstacle", LaunchConfiguration(
                 'obstacle') ],
         remappings=[('/cmd_vel', cmd_vel_remapping),]
-        )   
+        ),
+        Node(
+            package='nav2_map_server',
+            executable='map_server',
+            name='filter_mask_server',
+            output='screen',
+            emulate_tty=True,
+            parameters=[filters_yaml]),
+
+        Node(
+            package='nav2_map_server',
+            executable='costmap_filter_info_server',
+            name='costmap_filter_info_server',
+            output='screen',
+            emulate_tty=True,
+            parameters=[filters_yaml]),   
     #  Node(
     #         package='rviz2',
     #         executable='rviz2',
