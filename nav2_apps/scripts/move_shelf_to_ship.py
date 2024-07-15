@@ -19,7 +19,8 @@ import shutil
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
 from custom_interfaces.srv import GoToLoading
-from nav2_msgs.srv import ManageLifecycleNodes
+from rcl_interfaces.srv import SetParameters
+from rcl_interfaces.msg import Parameter,ParameterValue,ParameterType
 from rclpy.duration import Duration
 from rclpy.task import Future
 from rclpy.node import Node
@@ -57,12 +58,12 @@ class ServiceClient(Node):
             srv_name="/approach_shelf",
             callback_group=my_callback_group)
     self.service_client2 = self.create_client(
-            srv_type=ManageLifecycleNodes,
-            srv_name="/lifecycle_manager_pathplanner/manage_nodes",
+            srv_type=SetParameters,
+            srv_name="/global_costmap/global_costmap/set_parameters",
             callback_group=my_callback_group)
     self.service_client3 = self.create_client(
-            srv_type=ManageLifecycleNodes,
-            srv_name="/lifecycle_manager_pathplanner/manage_nodes",
+            srv_type=SetParameters,
+            srv_name="/local_costmap/local_costmap/set_parameters",
             callback_group=my_callback_group)
 
     self.future: Future = None
@@ -91,8 +92,11 @@ class ServiceClient(Node):
     self.get_logger().info('timer_callback lifecycle_service_client')
     while not self.service_client2.wait_for_service(timeout_sec=1.0):
         self.get_logger().info(f'service {self.service_client2.srv_name} not available, waiting...')
-    request = ManageLifecycleNodes.Request()
-    request.command = 1 # Pause the lifecycle manager for pathplanner
+    request = SetParameters.Request()
+    request.parameters = Parameter(name= 'robot_radius',  
+            value=ParameterValue(
+                    type=ParameterType.PARAMETER_DOUBLE, 
+                    double_value= 0.2))  
     self.future2 = self.service_client2.call_async(request)
     self.future2.add_done_callback(self.response2_callback)
     self.timer2.cancel()
@@ -101,8 +105,11 @@ class ServiceClient(Node):
     self.get_logger().info('timer_callback lifecycle_service_client')
     while not self.service_client3.wait_for_service(timeout_sec=1.0):
         self.get_logger().info(f'service {self.service_client3.srv_name} not available, waiting...')
-    request = ManageLifecycleNodes.Request()
-    request.command = 2 # Resume the lifecycle manager for pathplanner
+    request = SetParameters.Request()
+    request.parameters = Parameter(name= 'footprint',  
+            value=ParameterValue(
+                    type=ParameterType.PARAMETER_STRING, 
+                    string_value= '[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]'))
     self.future3 = self.service_client3.call_async(request)
     self.future3.add_done_callback(self.response3_callback)
     self.timer3.cancel()
@@ -131,7 +138,7 @@ class ServiceClient(Node):
     response = future.result()
     if response is not None:
         #self.get_logger().info("Some Response happened")
-        if(response.success):
+        if(response is not None):
             self.get_logger().info("response from lifecycle service server: Success!")
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
@@ -157,7 +164,7 @@ class ServiceClient(Node):
     response = future.result()
     if response is not None:
         #self.get_logger().info("Some Response happened")
-        if(response.success):
+        if(response is not None):
             self.get_logger().info("response from lifecycle service server: Success!")
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
