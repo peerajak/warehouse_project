@@ -1,11 +1,10 @@
-
 from rcl_interfaces.srv import SetParameters
 from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
 from rclpy.task import Future
 from rclpy.node import Node
 import rclpy
-from nav2_simple_commander.robot_navigator import BasicNavigator
-from geometry_msgs.msg import PoseStamped
+
+
 
 class ServiceClient(Node):
   def __init__(self):
@@ -38,7 +37,7 @@ class ServiceClient(Node):
     request.parameters = [Parameter(name= 'robot_radius',  
             value=ParameterValue(
                     type=ParameterType.PARAMETER_DOUBLE, 
-                    double_value= 0.5))  ]
+                    double_value= 0.2))  ]
     self.future2 = self.service_client2.call_async(request)
     self.future2.add_done_callback(self.response2_callback)
     self.timer2.cancel()
@@ -51,7 +50,7 @@ class ServiceClient(Node):
     request.parameters = [Parameter(name= 'footprint',  
             value=ParameterValue(
                     type=ParameterType.PARAMETER_STRING, 
-                    string_value= '[ [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5], [-0.5, 0.5] ]'))]
+                    string_value= '[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]'))]
     self.future3 = self.service_client3.call_async(request)
     self.future3.add_done_callback(self.response3_callback)
     self.timer3.cancel()
@@ -90,34 +89,17 @@ class ServiceClient(Node):
 def main():
 
     rclpy.init()
-    ####################
-    request_item_location = 'shelf_1'
-    request_destination = 'shipping'
-    ####################
-
-
-
-    navigator = BasicNavigator()
-
-    # Set your demo's initial pose
-    initial_pose = PoseStamped()
-    initial_pose.header.frame_id = 'map'
-    initial_pose.header.stamp = navigator.get_clock().now().to_msg()
-    initial_pose.pose.position.x = -0.0043595783091967205
-    initial_pose.pose.position.y = float(-8.493102018902478e-06)
-    initial_pose.pose.orientation.z = 0.0020702609325826864
-    initial_pose.pose.orientation.w = 0.9999978570075393
-    navigator.setInitialPose(initial_pose)
-    navigator.waitUntilNav2Active()
-
     executor = rclpy.executors.MultiThreadedExecutor()
     service_client_node = ServiceClient()    
     executor.add_node(service_client_node )
     executor.spin()
 
-        
+
+
+
+
 if __name__ == '__main__':
-
     main()
-
     exit(0)
+
+

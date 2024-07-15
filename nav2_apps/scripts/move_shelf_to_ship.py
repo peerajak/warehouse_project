@@ -93,10 +93,10 @@ class ServiceClient(Node):
     while not self.service_client2.wait_for_service(timeout_sec=1.0):
         self.get_logger().info(f'service {self.service_client2.srv_name} not available, waiting...')
     request = SetParameters.Request()
-    request.parameters = Parameter(name= 'robot_radius',  
+    request.parameters = [Parameter(name= 'robot_radius',  
             value=ParameterValue(
                     type=ParameterType.PARAMETER_DOUBLE, 
-                    double_value= 0.2))  
+                    double_value= 0.7071068))  ]
     self.future2 = self.service_client2.call_async(request)
     self.future2.add_done_callback(self.response2_callback)
     self.timer2.cancel()
@@ -106,10 +106,10 @@ class ServiceClient(Node):
     while not self.service_client3.wait_for_service(timeout_sec=1.0):
         self.get_logger().info(f'service {self.service_client3.srv_name} not available, waiting...')
     request = SetParameters.Request()
-    request.parameters = Parameter(name= 'footprint',  
+    request.parameters = [Parameter(name= 'footprint',  
             value=ParameterValue(
                     type=ParameterType.PARAMETER_STRING, 
-                    string_value= '[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]'))
+                    string_value= '[ [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5], [-0.5, 0.5] ]'))]
     self.future3 = self.service_client3.call_async(request)
     self.future3.add_done_callback(self.response3_callback)
     self.timer3.cancel()
@@ -138,19 +138,11 @@ class ServiceClient(Node):
     response = future.result()
     if response is not None:
         #self.get_logger().info("Some Response happened")
-        if(response is not None):
-            self.get_logger().info("response from lifecycle service server: Success!")
+        if(response.results[0].successful):
+            self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
             nstate = nstates[2]
-            source = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller_robot_with_cart_sim.yaml"
-            destination = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller.yaml"
-            dest = shutil.copyfile(source, destination)
-            self.get_logger().info("copy from: "+source+" to "+dest)
-            source2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server_robot_with_cart_sim.yaml"
-            destination2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server.yaml"
-            dest2 = shutil.copyfile(source2, destination2)
-            self.get_logger().info("copy from: "+source2+" to "+dest2)
             timer_period: float = 1.0
             self.timer3 = self.create_timer(timer_period_sec=timer_period,callback=self.timer3_callback)
         else:
@@ -164,19 +156,8 @@ class ServiceClient(Node):
     response = future.result()
     if response is not None:
         #self.get_logger().info("Some Response happened")
-        if(response is not None):
-            self.get_logger().info("response from lifecycle service server: Success!")
-            msgs_empty = String()
-            self.publisher_lift.publish(msgs_empty)
-            #Make sure to swap back the original file
-            source = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller_robot_alone_sim.yaml"
-            destination = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller.yaml"
-            dest = shutil.copyfile(source, destination)
-            self.get_logger().info("copy from: "+source+" to "+dest)
-            source2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server_robot_alone_sim.yaml"
-            destination2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server.yaml"
-            dest2 = shutil.copyfile(source2, destination2)
-            self.get_logger().info("copy from: "+source2+" to "+dest2)
+        if(response.results[0].successful):
+            self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
             nstate = nstates[3]
             self.navigator.waitUntilNav2Active()
             print('Got product from ' + self.request_item_location +
@@ -194,8 +175,8 @@ class ServiceClient(Node):
             nstate = nstates[4]            
     else:
         self.get_logger().info("The response is None")
-    print('leaving service node') 
-    rclpy.shutdown()
+    #print('leaving service node') 
+    #rclpy.shutdown()
  
 
 
@@ -278,7 +259,7 @@ def main():
         executor.spin_once()
         print(nstate)
     
-    # Wait for navigation to activate fully
+    
 
 
 
