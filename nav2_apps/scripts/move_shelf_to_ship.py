@@ -163,14 +163,14 @@ class ServiceClient(Node):
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
             #Make sure to swap back the original file
-            # source = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller_robot_alone_sim.yaml"
-            # destination = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller.yaml"
-            # dest = shutil.copyfile(source, destination)
-            # self.get_logger().info("copy from: "+source+" to "+dest)
-            # source2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server_robot_alone_sim.yaml"
-            # destination2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server.yaml"
-            # dest2 = shutil.copyfile(source2, destination2)
-            # self.get_logger().info("copy from: "+source2+" to "+dest2)
+            source = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller_robot_alone_sim.yaml"
+            destination = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller.yaml"
+            dest = shutil.copyfile(source, destination)
+            self.get_logger().info("copy from: "+source+" to "+dest)
+            source2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server_robot_alone_sim.yaml"
+            destination2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server.yaml"
+            dest2 = shutil.copyfile(source2, destination2)
+            self.get_logger().info("copy from: "+source2+" to "+dest2)
             nstate = nstates[3]
             self.navigator.waitUntilNav2Active()
             print('Got product from ' + self.request_item_location +
