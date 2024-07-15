@@ -123,6 +123,6 @@ ros2 service call /lifecycle_manager_pathplanner/manage_nodes  nav2_msgs/srv/Man
 resume node 
 ros2 service call /lifecycle_manager_pathplanner/manage_nodes  nav2_msgs/srv/ManageLifecycleNodes command:\ 2\
 
-
-
+# How to check the footprint
+https://docs.nav2.org/setup_guides/footprint/setup_footprint.html
 

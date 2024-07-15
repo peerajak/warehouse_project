@@ -73,4 +73,4 @@ global_costmap:
           marking: True
           data_type: "PointCloud2"
       always_send_full_costmap: True
-       
+        
