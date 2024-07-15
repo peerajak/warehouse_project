@@ -15,7 +15,7 @@
 
 import time
 from copy import deepcopy
-
+import shutil
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
 from custom_interfaces.srv import GoToLoading
@@ -58,9 +58,14 @@ class ServiceClient(Node):
             srv_type=ManageLifecycleNodes,
             srv_name="/lifecycle_manager_pathplanner/manage_nodes",
             callback_group=my_callback_group)
+    self.service_client3 = self.create_client(
+            srv_type=ManageLifecycleNodes,
+            srv_name="/lifecycle_manager_pathplanner/manage_nodes",
+            callback_group=my_callback_group)
 
     self.future: Future = None
     self.future2: Future = None
+    self.future3: Future = None
     self.final_approach = True
 
     timer_period: float = 1.0
@@ -90,6 +95,16 @@ class ServiceClient(Node):
     self.future2.add_done_callback(self.response2_callback)
     self.timer2.cancel()
 
+  def timer3_callback(self):  
+    self.get_logger().info('timer_callback lifecycle_service_client')
+    while not self.service_client3.wait_for_service(timeout_sec=1.0):
+        self.get_logger().info(f'service {self.service_client3.srv_name} not available, waiting...')
+    request = ManageLifecycleNodes.Request()
+    request.command = 2 # Resume the lifecycle manager for pathplanner
+    self.future3 = self.service_client3.call_async(request)
+    self.future3.add_done_callback(self.response3_callback)
+    self.timer3.cancel()
+
   def response_callback(self, future: Future):
     global nstate
     response = future.result()
@@ -105,6 +120,7 @@ class ServiceClient(Node):
         else:
             self.get_logger().info("response from service server: Failed!")
             nstate = nstates[4]
+            rclpy.shutdown()
     else:
         self.get_logger().info("The response is None")
 
@@ -117,19 +133,57 @@ class ServiceClient(Node):
             self.get_logger().info("response from lifecycle service server: Success!")
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
-            nstate = nstates[3]
-            rclpy.shutdown()
+            nstate = nstates[2]
+            source = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller_robot_with_cart_sim.yaml"
+            destination = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller.yaml"
+            dest = shutil.copyfile(source, destination)
+            self.get_logger().info("copy from: "+source+" to "+dest)
+            source2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server_robot_with_cart_sim.yaml"
+            destination2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server.yaml"
+            dest2 = shutil.copyfile(source2, destination2)
+            self.get_logger().info("copy from: "+source2+" to "+dest2)
+            timer_period: float = 1.0
+            self.timer3 = self.create_timer(timer_period_sec=timer_period,callback=self.timer3_callback)
         else:
             self.get_logger().info("response from lifecycle service server: Failed!")
             nstate = nstates[4]
             rclpy.shutdown()
     else:
         self.get_logger().info("The response is None")
-    
+
+  def response3_callback(self, future: Future):
+    global nstate
+    response = future.result()
+    if response is not None:
+        #self.get_logger().info("Some Response happened")
+        if(response.success):
+            self.get_logger().info("response from lifecycle service server: Success!")
+            msgs_empty = String()
+            self.publisher_lift.publish(msgs_empty)
+            #Make sure to swap back the original file
+            source = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller_robot_alone_sim.yaml"
+            destination = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller.yaml"
+            dest = shutil.copyfile(source, destination)
+            self.get_logger().info("copy from: "+source+" to "+dest)
+            source2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server_robot_alone_sim.yaml"
+            destination2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server.yaml"
+            dest2 = shutil.copyfile(source2, destination2)
+            self.get_logger().info("copy from: "+source2+" to "+dest2)
+            nstate = nstates[3]
+            rclpy.shutdown()
+
+        else:
+            self.get_logger().info("response from lifecycle service server: Failed!")
+            nstate = nstates[4]
+            rclpy.shutdown()
+            
+    else:
+        self.get_logger().info("The response is None")    
 
 
 def main():
     global nstate
+    rclpy.init()
     # Recieved virtual request for picking item at Shelf A and bringing to
     # worker at the pallet jack 7 for shipping. This request would
     # contain the shelf ID ("shelf_A") and shipping destination ("pallet_jack7")
@@ -189,14 +243,31 @@ def main():
         initial_pose.header.stamp = navigator.get_clock().now().to_msg()
         navigator.goToPose(initial_pose)
         nstate = nstates[4]
-
+        rclpy.shutdown()
     elif result == TaskResult.FAILED:
         print('Task at ' + request_item_location + ' failed!')
         nstate = nstates[4]
+        # We do not shutdown here because many failed was good enough in simulation
 
 
     while not navigator.isTaskComplete():
         pass
+
+    executor = rclpy.executors.MultiThreadedExecutor()
+    service_client_node = ServiceClient()    
+    executor.add_node(service_client_node )
+    executor.spin()
+    
+    print('Got product from ' + request_item_location +
+        '! Bringing product to shipping destination (' + request_destination + ')...')
+    shipping_destination = PoseStamped()
+    shipping_destination.header.frame_id = 'map'
+    shipping_destination.header.stamp = navigator.get_clock().now().to_msg()
+    shipping_destination.pose.position.x = shipping_destinations[request_destination][0]
+    shipping_destination.pose.position.y = shipping_destinations[request_destination][1]
+    shipping_destination.pose.orientation.z = shipping_destinations[request_destination][2]
+    shipping_destination.pose.orientation.w = shipping_destinations[request_destination][3]
+    navigator.goToPose(shipping_destination)
 
 
 
@@ -206,12 +277,9 @@ def main():
 
 
 if __name__ == '__main__':
-    rclpy.init()
+
     main()
-    executor = rclpy.executors.MultiThreadedExecutor()
-    service_client_node = ServiceClient()    
-    executor.add_node(service_client_node )
-    executor.spin()
+
 
     # TODO add new lifecycle_service client
     # - remove service_client_node
@@ -222,6 +290,5 @@ if __name__ == '__main__':
     # - add lifecycle_service_client instance
     ####
 
-    work_finish = False
-    state2_firsttime = True
+
 
