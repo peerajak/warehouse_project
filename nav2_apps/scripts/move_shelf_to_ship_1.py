@@ -24,7 +24,6 @@ from rclpy.duration import Duration
 from rclpy.task import Future
 from rclpy.node import Node
 import rclpy
-
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
 nstates = ['ToPreload', 'AttachShelf', 'ToShipping','EndProgramSuccess', 'EndProgramFailure']

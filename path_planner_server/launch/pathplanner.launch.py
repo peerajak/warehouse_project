@@ -2,7 +2,8 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription, LaunchContext
 from launch_ros.actions import Node
-from launch.actions import LogInfo,DeclareLaunchArgument
+from launch.actions import LogInfo,DeclareLaunchArgument,RegisterEventHandler
+from launch.event_handlers import OnProcessExit,OnExecutionComplete
 from launch.substitutions import LaunchConfiguration
 from launch.actions import OpaqueFunction
 
@@ -28,6 +29,21 @@ def is_sim(context: LaunchContext, launchConfig):
         planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'planner_server.yaml')
         filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'filter.yaml')
         cmd_vel_remapping = '/diffbot_base_controller/cmd_vel_unstamped'
+    
+    lifecycle_mger = Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager_pathplanner',
+            output='screen',
+            parameters=[{'use_sim_time': bool_use_sim_time},
+                        {'autostart': True},
+                        {'node_names': ['planner_server',
+                                        'controller_server',
+                                        'behavior_server',
+                                        'bt_navigator',
+                                        'filter_mask_server',
+                                        'costmap_filter_info_server'
+                                        ]}])
 
     return  [LogInfo(msg=sim_or_real_str),
         Node(
@@ -58,20 +74,7 @@ def is_sim(context: LaunchContext, launchConfig):
             name='planner_server',
             output='screen',
             parameters=[planner_yaml]),
-        Node(
-            package='nav2_lifecycle_manager',
-            executable='lifecycle_manager',
-            name='lifecycle_manager_pathplanner',
-            output='screen',
-            parameters=[{'use_sim_time': bool_use_sim_time},
-                        {'autostart': True},
-                        {'node_names': ['planner_server',
-                                        'controller_server',
-                                        'behavior_server',
-                                        'bt_navigator',
-                                        'filter_mask_server',
-                                        'costmap_filter_info_server'
-                                        ]}]),
+        lifecycle_mger,
         DeclareLaunchArgument('obstacle', default_value='0.5'),
         DeclareLaunchArgument('degrees', default_value='-90'),
         DeclareLaunchArgument('final_approach', default_value='false'),
@@ -111,7 +114,15 @@ def is_sim(context: LaunchContext, launchConfig):
     #         output='screen',
     #         name='rviz_node',
     #         parameters=[{'use_sim_time': bool_use_sim_time}],
-    #         arguments=['-d', rviz_config_dir])
+    #         arguments=['-d', rviz_config_dir]),
+    #   RegisterEventHandler(
+    #     OnProcessExit(
+    #         target_action=lifecycle_mger,
+    #         on_exit=[
+    #             LogInfo(msg='lifecycle_manager finished'),lifecycle_mger
+    #         ]
+    #     )
+    # ),
         ]
 
 def generate_launch_description():    
@@ -129,6 +140,5 @@ def generate_launch_description():
     return LaunchDescription([ 
         static_tf_pub,    
         DeclareLaunchArgument('env_type', default_value='sim'),  
-        OpaqueFunction(function=is_sim, args=[real_or_sim]),
- 
+        OpaqueFunction(function=is_sim, args=[real_or_sim]), 
     ])

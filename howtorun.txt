@@ -115,7 +115,7 @@ or
 ros2 launch path_planner_server pathplanner.launch.py env_type:=sim
 
 - Terminal 4
-python3 ~/ros2_ws/src/warehouse_project/nav2_apps/scripts/move_shelf_to_ship_1.py
+python3 ~/ros2_ws/src/warehouse_project/nav2_apps/scripts/move_shelf_to_ship.py
 
 Lifecycle manager by CLI
 pause node
@@ -125,4 +125,36 @@ ros2 service call /lifecycle_manager_pathplanner/manage_nodes  nav2_msgs/srv/Man
 
 # How to check the footprint
 https://docs.nav2.org/setup_guides/footprint/setup_footprint.html
+
+# How to set param while node running
+user:~$ ros2 param set /global_costmap/global_costmap robot_radius 2.0
+Set parameter successful
+user:~$ ros2 param set /local_costmap/local_costmap footprint "[ [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5], [-0.5, 0.5] ]"
+Set parameter successful
+
+# How to set param while node running with Service
+-----------
+user:~$ ros2 service call /local_costmap/local_costmap/get_parameters rcl_interfaces/srv/GetParameters "{names: ['footprint']}"
+waiting for service to become available...
+requester: making request: rcl_interfaces.srv.GetParameters_Request(names=['footprint'])
+
+response:
+rcl_interfaces.srv.GetParameters_Response(values=[rcl_interfaces.msg.ParameterValue(type=4, bool_value=False, integer_value=0, double_value=0.0, string_value='[ [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5], [-0.5, 0.5] ]', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[])])
+----------------- Set with Service Local costmap
+user:~$ ros2 service call /local_costmap/local_costmap/set_parameters rcl_interfaces/srv/SetParameters "parameters: [{name: 'footprint', value:{type: 4, string_value: '[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]'}}]"
+waiting for service to become available...
+requester: making request: rcl_interfaces.srv.SetParameters_Request(parameters=[rcl_interfaces.msg.Parameter(name='footprint', value=rcl_interfaces.msg.ParameterValue(type=4, bool_value=False, integer_value=0, double_value=0.0, string_value='[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[]))])
+
+response:
+rcl_interfaces.srv.SetParameters_Response(results=[rcl_interfaces.msg.SetParametersResult(successful=True, reason='')])
+-------------------Set with Service global costmap
+
+user:~$ ros2 service call /global_costmap/global_costmap/set_parameters rcl_interfaces/srv/SetParameters "parameters: [{name: 'robot_radius', value:{type: 3, string_value: '0.2'}}]"
+requester: making request: rcl_interfaces.srv.SetParameters_Request(parameters=[rcl_interfaces.msg.Parameter(name='robot_radius', value=rcl_interfaces.msg.ParameterValue(type=3, bool_value=False, integer_value=0, double_value=0.0, string_value='0.2', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[]))])
+
+response:
+rcl_interfaces.srv.SetParameters_Response(results=[rcl_interfaces.msg.SetParametersResult(successful=True, reason='')])
+
+user:~$
+
 
