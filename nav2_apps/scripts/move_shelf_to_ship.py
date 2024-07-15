@@ -77,6 +77,10 @@ class ServiceClient(Node):
             msg_type=String,
             topic='/elevator_up',
             qos_profile=1)
+    self.publisher_liftdown = self.create_publisher(
+            msg_type=String,
+            topic='/elevator_down',
+            qos_profile=1)
 
   def timer_callback(self): 
     self.get_logger().info('timer_callback service_client') 
@@ -96,7 +100,7 @@ class ServiceClient(Node):
     request.parameters = [Parameter(name= 'robot_radius',  
             value=ParameterValue(
                     type=ParameterType.PARAMETER_DOUBLE, 
-                    double_value= 0.7071068))  ]
+                    double_value= 0.6))  ]#0.7071068
     self.future2 = self.service_client2.call_async(request)
     self.future2.add_done_callback(self.response2_callback)
     self.timer2.cancel()
@@ -140,8 +144,6 @@ class ServiceClient(Node):
         #self.get_logger().info("Some Response happened")
         if(response.results[0].successful):
             self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
-            msgs_empty = String()
-            self.publisher_lift.publish(msgs_empty)
             nstate = nstates[2]
             timer_period: float = 1.0
             self.timer3 = self.create_timer(timer_period_sec=timer_period,callback=self.timer3_callback)
@@ -170,6 +172,8 @@ class ServiceClient(Node):
             shipping_destination.pose.orientation.z = shipping_destinations[self.request_destination][2]
             shipping_destination.pose.orientation.w = shipping_destinations[self.request_destination][3]
             self.navigator.goToPose(shipping_destination)
+            msgs_empty = String()
+            self.publisher_liftdown.publish(msgs_empty)
         else:
             self.get_logger().info("response from lifecycle service server: Failed!")
             nstate = nstates[4]            
