@@ -46,9 +46,12 @@ and at the pallet jack to remove it
 (probably with a button for 'got item, robot go do next task').
 '''
 class ServiceClient(Node):
-  def __init__(self):
+  def __init__(self,navigator,request_item_location,request_destination):
     super().__init__('service_client')
     self.get_logger().info('init service_client')
+    self.navigator = navigator
+    self.request_item_location = request_item_location
+    self.request_destination = request_destination
     my_callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
     self.service_client = self.create_client(
             srv_type=GoToLoading,
@@ -120,7 +123,7 @@ class ServiceClient(Node):
         else:
             self.get_logger().info("response from service server: Failed!")
             nstate = nstates[4]
-            rclpy.shutdown()
+
     else:
         self.get_logger().info("The response is None")
 
@@ -147,7 +150,6 @@ class ServiceClient(Node):
         else:
             self.get_logger().info("response from lifecycle service server: Failed!")
             nstate = nstates[4]
-            rclpy.shutdown()
     else:
         self.get_logger().info("The response is None")
 
@@ -161,24 +163,34 @@ class ServiceClient(Node):
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
             #Make sure to swap back the original file
-            source = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller_robot_alone_sim.yaml"
-            destination = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller.yaml"
-            dest = shutil.copyfile(source, destination)
-            self.get_logger().info("copy from: "+source+" to "+dest)
-            source2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server_robot_alone_sim.yaml"
-            destination2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server.yaml"
-            dest2 = shutil.copyfile(source2, destination2)
-            self.get_logger().info("copy from: "+source2+" to "+dest2)
+            #source = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller_robot_alone_sim.yaml"
+            #destination = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller.yaml"
+            #dest = shutil.copyfile(source, destination)
+            #self.get_logger().info("copy from: "+source+" to "+dest)
+            #source2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server_robot_alone_sim.yaml"
+            #destination2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server.yaml"
+            #dest2 = shutil.copyfile(source2, destination2)
+            #self.get_logger().info("copy from: "+source2+" to "+dest2)
             nstate = nstates[3]
-            rclpy.shutdown()
-
+            self.navigator.waitUntilNav2Active()
+            print('Got product from ' + self.request_item_location +
+                '! Bringing product to shipping destination (' + self.request_destination + ')...')
+            shipping_destination = PoseStamped()
+            shipping_destination.header.frame_id = 'map'
+            shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
+            shipping_destination.pose.position.x = shipping_destinations[self.request_destination][0]
+            shipping_destination.pose.position.y = shipping_destinations[self.request_destination][1]
+            shipping_destination.pose.orientation.z = shipping_destinations[self.request_destination][2]
+            shipping_destination.pose.orientation.w = shipping_destinations[self.request_destination][3]
+            self.navigator.goToPose(shipping_destination)
         else:
             self.get_logger().info("response from lifecycle service server: Failed!")
-            nstate = nstates[4]
-            rclpy.shutdown()
-            
+            nstate = nstates[4]            
     else:
-        self.get_logger().info("The response is None")    
+        self.get_logger().info("The response is None")
+    print('leaving service node') 
+    rclpy.shutdown()
+ 
 
 
 def main():
@@ -243,31 +255,26 @@ def main():
         initial_pose.header.stamp = navigator.get_clock().now().to_msg()
         navigator.goToPose(initial_pose)
         nstate = nstates[4]
-        rclpy.shutdown()
+
     elif result == TaskResult.FAILED:
         print('Task at ' + request_item_location + ' failed!')
         nstate = nstates[4]
-        # We do not shutdown here because many failed was good enough in simulation
+
 
 
     while not navigator.isTaskComplete():
         pass
 
     executor = rclpy.executors.MultiThreadedExecutor()
-    service_client_node = ServiceClient()    
+    service_client_node = ServiceClient(navigator,request_item_location,request_destination)    
     executor.add_node(service_client_node )
-    executor.spin()
+    while rclpy.ok and not(nstate == nstates[3] or nstate == nstates[4]):
+        executor.spin_once()
+        print(nstate)
     
-    print('Got product from ' + request_item_location +
-        '! Bringing product to shipping destination (' + request_destination + ')...')
-    shipping_destination = PoseStamped()
-    shipping_destination.header.frame_id = 'map'
-    shipping_destination.header.stamp = navigator.get_clock().now().to_msg()
-    shipping_destination.pose.position.x = shipping_destinations[request_destination][0]
-    shipping_destination.pose.position.y = shipping_destinations[request_destination][1]
-    shipping_destination.pose.orientation.z = shipping_destinations[request_destination][2]
-    shipping_destination.pose.orientation.w = shipping_destinations[request_destination][3]
-    navigator.goToPose(shipping_destination)
+    # Wait for navigation to activate fully
+
+
 
 
 
@@ -280,7 +287,7 @@ if __name__ == '__main__':
 
     main()
 
-
+    exit(0)
     # TODO add new lifecycle_service client
     # - remove service_client_node
     # - create lifecycle_service_client class
