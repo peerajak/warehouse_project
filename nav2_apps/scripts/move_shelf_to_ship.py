@@ -79,8 +79,8 @@ class ServiceClient(Node):
     self.future3: Future = None
     self.final_approach = True
 
-    self.robot_with_cart_radius = 0.3
-    self.robot_with_cart_footprint = '[ [0.5, 0.3], [0.5, -0.3], [-0.5, -0.3], [-0.5, 0.3] ]'
+    self.robot_with_cart_radius = 0.25
+    self.robot_with_cart_footprint = '[ [0.5, 0.25], [0.5, -0.25], [-0.5, -0.25], [-0.5, 0.25] ]'
 
     timer_period: float = 1.0
     self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
