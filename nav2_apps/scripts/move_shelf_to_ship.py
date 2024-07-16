@@ -32,13 +32,21 @@ nstate = nstates[0]
 
 # Shelf positions for picking
 shelf_positions = {
-    "shelf_1": [5.729634686956881, 0.07032379500580269,-0.6874334536853087,0.726247372975826]}
+    "shelf_1": [5.779634686956881, 0.07032379500580269,-0.6874334536853087,0.726247372975826]}
 
 # Shipping destination for picked products
 shipping_destinations = {
     "shipping": [2.5069296916199484, 1.3907159489075767,0.756143318789467,0.6544060524246781],
 }
 
+security_route_return_journey = [
+        [5.557730437379715,  -1.1],
+        [5.557730437379715,  -0.9],
+        [5.557730437379715,  -0.5],
+        #[5.557730437379715,  -0.3],
+        #[5.557730437379715,  -0.21633228096287413],
+        [2.5069296916199484, 1.3907159489075767]
+        ]
 '''
 Basic item picking demo. In this demonstration, the expectation
 is that a person is waiting at the item shelf to put the item on the robot
@@ -71,6 +79,9 @@ class ServiceClient(Node):
     self.future3: Future = None
     self.final_approach = True
 
+    self.robot_with_cart_radius = 0.3
+    self.robot_with_cart_footprint = '[ [0.5, 0.3], [0.5, -0.3], [-0.5, -0.3], [-0.5, 0.3] ]'
+
     timer_period: float = 1.0
     self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
     self.publisher_lift = self.create_publisher(
@@ -100,7 +111,7 @@ class ServiceClient(Node):
     request.parameters = [Parameter(name= 'robot_radius',  
             value=ParameterValue(
                     type=ParameterType.PARAMETER_DOUBLE, 
-                    double_value= 0.6))  ]#0.7071068
+                    double_value= self.robot_with_cart_radius))  ]#0.7071068
     self.future2 = self.service_client2.call_async(request)
     self.future2.add_done_callback(self.response2_callback)
     self.timer2.cancel()
@@ -113,7 +124,7 @@ class ServiceClient(Node):
     request.parameters = [Parameter(name= 'footprint',  
             value=ParameterValue(
                     type=ParameterType.PARAMETER_STRING, 
-                    string_value= '[ [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5], [-0.5, 0.5] ]'))]
+                    string_value= self.robot_with_cart_footprint))]
     self.future3 = self.service_client3.call_async(request)
     self.future3.add_done_callback(self.response3_callback)
     self.timer3.cancel()
@@ -164,16 +175,17 @@ class ServiceClient(Node):
             self.navigator.waitUntilNav2Active()
             print('Got product from ' + self.request_item_location +
                 '! Bringing product to shipping destination (' + self.request_destination + ')...')
-            shipping_destination = PoseStamped()
-            shipping_destination.header.frame_id = 'map'
-            shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
-            shipping_destination.pose.position.x = shipping_destinations[self.request_destination][0]
-            shipping_destination.pose.position.y = shipping_destinations[self.request_destination][1]
-            shipping_destination.pose.orientation.z = shipping_destinations[self.request_destination][2]
-            shipping_destination.pose.orientation.w = shipping_destinations[self.request_destination][3]
-            self.navigator.goToPose(shipping_destination)
-            msgs_empty = String()
-            self.publisher_liftdown.publish(msgs_empty)
+            route_poses = []
+            pose = PoseStamped()
+            pose.header.frame_id = 'map'
+            pose.header.stamp = self.navigator.get_clock().now().to_msg()
+            pose.pose.orientation.w = 1.0
+            for pt in security_route_return_journey:
+                pose.pose.position.x = pt[0]
+                pose.pose.position.y = pt[1]
+                route_poses.append(deepcopy(pose))
+            self.navigator.goThroughPoses(route_poses)
+
         else:
             self.get_logger().info("response from lifecycle service server: Failed!")
             nstate = nstates[4]            

@@ -68,6 +68,7 @@ const double angle_increment = 0.004363333340734243;
 const int total_scan_index = 1081;
 const int half_scan_index = 540;
 
+float degree_to_radian(float degree) { return degree / 180 * pi; }
 
 double scan_index_to_radian(int scan_index) {
   return double(scan_index - half_scan_index) * angle_increment;
@@ -159,9 +160,7 @@ class MidLegsTFService : public rclcpp::Node {
 public:
   MidLegsTFService(int argc, char *argv[]) : Node("mid_legs_tf_service_node") {
     //------ 0. internal members ----------------//
-    message1 = argv[2];
-    obstacle = std::stof(message1);
-    RCLCPP_INFO(this->get_logger(), "Got params obstacle: %f",obstacle);
+
  
     tf_published = false;          
     nstate = state_zero;
@@ -285,7 +284,7 @@ private:
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_static_publisher_;
-  double obstacle = 0.3;
+  double obstacle = 0.5;
   bool tf_published;
   tf2::Vector3 k_point_in_odom_coordinates;
   //------- 3. Laser related  -----------//
@@ -731,8 +730,8 @@ private:
             ling.angular.x = 0;
             ling.angular.y = 0;
             ling.angular.z = 0;
-
-              nstate = service_completed_success;
+            rotate_at_the_end(current_yaw_rad_ + pi);
+            nstate = service_completed_success;
            }
        
       }    
@@ -753,7 +752,7 @@ private:
             ling.angular.y = 0;
             ling.angular.z = 0;
             move_robot(ling);
-  rclcpp::shutdown();
+     rclcpp::shutdown();
 
       break;
     }
@@ -761,6 +760,38 @@ private:
 
   }
   //--------4. Service related Functions-----------//
+    bool check_reached_goal_desire_angle(float target_yaw_rad__, float current_yaw_rad__, float delta_error = 0.08) {
+    float delta_theta =  std::abs(radian_difference(target_yaw_rad__, current_yaw_rad__));
+    return delta_theta < delta_error; // IN GOAL return true else false;
+  }
+  void rotate_at_the_end(float target_yaw_rad_) {
+    rclcpp::Rate loop_rate(1);
+    RCLCPP_INFO(this->get_logger(), "rotate_at_the_end() target %f, current %f ",target_yaw_rad_, current_yaw_rad_);
+    while (!check_reached_goal_desire_angle(target_yaw_rad_,current_yaw_rad_) && rclcpp::ok()) {
+    //while(true){
+    float angular_z_raw =
+          radian_difference(target_yaw_rad_, current_yaw_rad_);
+
+      ling.linear.x = 0.0;
+      ling.angular.z =
+          angular_z_raw < 1.5 ? angular_z_raw : 0.5 * angular_z_raw;
+      // if (std::abs(ling.angular.z ) >1)
+      //      ling.angular.z *= 0.1;
+      move_robot(ling);
+      RCLCPP_INFO(
+          this->get_logger(),
+          "Rotating current pos=['%f','%f'] target rad "
+          "'%f',current rad %f, angular speed %f",
+          current_pos_.x, current_pos_.y, target_yaw_rad_, current_yaw_rad_,
+          ling.angular.z);
+      loop_rate.sleep();
+    }
+    ling.linear.x = 0.0;
+    ling.angular.z =0.0;
+    move_robot(ling);
+
+  }
+
   void service_callback(const std::shared_ptr<GoToLoading::Request> request,
                         const std::shared_ptr<GoToLoading::Response> response) {
 
@@ -790,6 +821,12 @@ private:
     //_service_activated = false;
   }
 };
+
+
+
+
+
+
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
