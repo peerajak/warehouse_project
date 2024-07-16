@@ -43,6 +43,8 @@ security_route_return_journey = [
         [5.557730437379715,  -1.1],
         [5.557730437379715,  -0.9],
         [5.557730437379715,  -0.5],
+        [4.372317535720752,  -0.01],
+        [3.92317535720752,   -0.01],
         #[5.557730437379715,  -0.3],
         #[5.557730437379715,  -0.21633228096287413],
         [2.5069296916199484, 1.3907159489075767]
@@ -79,8 +81,8 @@ class ServiceClient(Node):
     self.future3: Future = None
     self.final_approach = True
 
-    self.robot_with_cart_radius = 0.25
-    self.robot_with_cart_footprint = '[ [0.5, 0.25], [0.5, -0.25], [-0.5, -0.25], [-0.5, 0.25] ]'
+    self.robot_with_cart_radius = 0.28
+    self.robot_with_cart_footprint = '[ [0.5, 0.28], [0.5, -0.28], [-0.5, -0.28], [-0.5, 0.28] ]'
 
     timer_period: float = 1.0
     self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
@@ -185,6 +187,53 @@ class ServiceClient(Node):
                 pose.pose.position.y = pt[1]
                 route_poses.append(deepcopy(pose))
             self.navigator.goThroughPoses(route_poses)
+                   # Do something during your route (e.x. AI detection on camera images for anomalies)
+        # Print ETA for the demonstration
+        i = 0
+        while not self.navigator.isTaskComplete():
+            i = i + 1
+            feedback = self.navigator.getFeedback()
+            if feedback and i % 5 == 0:
+                print('Estimated time to complete current route: ' + '{0:.0f}'.format(
+                      Duration.from_msg(feedback.estimated_time_remaining).nanoseconds / 1e9)
+                      + ' seconds.')
+
+                # Some failure mode, must stop since the robot is clearly stuck
+                if Duration.from_msg(feedback.navigation_time) > Duration(seconds=180.0):
+                    print('Navigation has exceeded timeout of 180s, canceling the request.')
+                    self.navigator.cancelTask()
+
+        result = self.navigator.getResult()
+        if result == TaskResult.SUCCEEDED:
+            print('Route complete! Goto shipping destination')
+            shipping_destination = PoseStamped()
+            shipping_destination.header.frame_id = 'map'
+            shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
+            shipping_destination.pose.position.x = shipping_destinations[self.request_destination][0]
+            shipping_destination.pose.position.y = shipping_destinations[self.request_destination][1]
+            shipping_destination.pose.orientation.z = shipping_destinations[self.request_destination][2]
+            shipping_destination.pose.orientation.w = shipping_destinations[self.request_destination][3]
+            self.navigator.goToPose(shipping_destination)
+            result = self.navigator.getResult()
+            if result == TaskResult.SUCCEEDED:
+                print('Arrived shipping destination (' + self.request_destination + ')...')
+                msgs_empty = String()
+                self.publisher_liftdown.publish(msgs_empty)
+
+            elif result == TaskResult.CANCELED:
+                print('Task at ' + request_item_location +
+                    ' was canceled. Returning to staging point...')
+            elif result == TaskResult.FAILED:
+                print('Task at ' + request_item_location + ' failed!')
+                exit(-1)
+
+            while not navigator.isTaskComplete():
+                pass
+        elif result == TaskResult.CANCELED:
+            print('Security route was canceled, exiting.')
+            exit(1)
+        elif result == TaskResult.FAILED:
+            print('Security route failed! Restarting from the other side...')
 
         else:
             self.get_logger().info("response from lifecycle service server: Failed!")
