@@ -87,6 +87,14 @@ double magnitude_of_vector(double x_length, double y_length){
    return sqrt(x_length*x_length + y_length*y_length);
 }
 
+double helper_fn_sqrt_01(double x){
+    return (x > 0 && x <1)? sqrt(x) : x;
+}
+
+double helper_fn_sqrt_0n(double x){
+    return (x >= 0)? sqrt(x) : x;
+}
+
 class group_of_laser {
 public:
   enum insertable_state { insertable, full } _state;
@@ -291,7 +299,7 @@ private:
   rclcpp::CallbackGroup::SharedPtr callback_group_3_laser;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
       subscription_3_laser;
-  const double precision_threshold = 0.05;
+  const double precision_threshold = 0.01;
 
   //--------4. Service related -----------//
   rclcpp::CallbackGroup::SharedPtr callback_group_4_service;
@@ -637,13 +645,17 @@ private:
             double scaleRotationRate = 0.6;
              double scaleForwardSpeed = 1.0;
             //double magnitude_of_ttt_linear = magnitude_of_vector(ttt.transform.translation.x,ttt.transform.translation.y);
+            //ling.linear.x = helper_fn_sqrt_01(scaleForwardSpeed *  ttt.transform.translation.x);
             ling.linear.x = scaleForwardSpeed *  ttt.transform.translation.x;
             ling.linear.y = 0;
             if(abs(ttt.transform.translation.x) <= precision_threshold){
                double target_yaw_rad = yaw_theta_from_quaternion(
                 ttt.transform.rotation.x, ttt.transform.rotation.y,
                 ttt.transform.rotation.z, ttt.transform.rotation.w);
-               ling.angular.z = scaleRotationRate*target_yaw_rad;  
+               ling.angular.z =  helper_fn_sqrt_01(scaleRotationRate*target_yaw_rad);  
+               RCLCPP_INFO(this->get_logger(), "ling.angular.z: %f, target_yaw_rad: %f, precision_threshold %f",
+               ling.angular.z, target_yaw_rad,precision_threshold);
+               //ling.angular.z = scaleRotationRate*target_yaw_rad;  
                if(abs(ttt.transform.translation.x) < precision_threshold && target_yaw_rad <precision_threshold){
                   nstate = approach_shelf2;
                }            
@@ -713,9 +725,11 @@ private:
             double target_yaw_rad = yaw_theta_from_quaternion(
             ttt2.transform.rotation.x, ttt2.transform.rotation.y,
             ttt2.transform.rotation.z, ttt2.transform.rotation.w);
-            ling.angular.z = scaleRotationRate*target_yaw_rad;   
+            //ling.angular.z = helper_fn_sqrt_01(scaleRotationRate*target_yaw_rad);   
+            ling.angular.z = scaleRotationRate*target_yaw_rad;  
             double scaleForwardSpeed = 1.0;
-            ling.linear.x = scaleForwardSpeed * ttt2.transform.translation.x;
+            ling.linear.x =scaleForwardSpeed * ttt2.transform.translation.x;
+            //ling.linear.x = helper_fn_sqrt_01(scaleForwardSpeed * ttt2.transform.translation.x);
             ling.linear.y = 0;
             RCLCPP_INFO(this->get_logger(), "ttt2.x: %f, ttt2.y: %f",ttt2.transform.translation.x,ttt2.transform.translation.y);    
                
