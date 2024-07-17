@@ -36,7 +36,7 @@ shelf_positions = {
     "shelf_1": [5.779634686956881, 0.07032379500580269,-0.6874334536853087,0.726247372975826]}
 # Shipping destination for picked products
 shipping_destinations = {
-    "shipping": [2.5027113663089837, 1.4654144578316795,0.781185191773144,0.6242993642110779],
+    "shipping": [2.5527113663089837, 1.4654144578316795,0.781185191773144,0.6242993642110779],
 }
 before_shipping = [4.092043659920394, -0.19048850942125184 , -0.9977004068537533, -0.06777830157104268]
 security_route_return_journey = [
@@ -75,12 +75,24 @@ class ServiceClient(Node):
             srv_type=SetParameters,
             srv_name="/local_costmap/local_costmap/set_parameters",
             callback_group=my_callback_group)
+    self.service_client4 = self.create_client(
+            srv_type=SetParameters,
+            srv_name="/global_costmap/global_costmap/set_parameters",
+            callback_group=my_callback_group)
+    self.service_client5 = self.create_client(
+            srv_type=SetParameters,
+            srv_name="/local_costmap/local_costmap/set_parameters",
+            callback_group=my_callback_group)
 
     self.future: Future = None
     self.future2: Future = None
     self.future3: Future = None
+    self.future4: Future = None
+    self.future5: Future = None
     self.final_approach = True
 
+    self.robot_radius = 0.15
+    self.robot_footprint = '[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]'
     self.robot_with_cart_radius = 0.28
     self.robot_with_cart_footprint = '[ [0.5, 0.28], [0.5, -0.28], [-0.5, -0.28], [-0.5, 0.28] ]'
 
@@ -106,7 +118,7 @@ class ServiceClient(Node):
     self.timer.cancel()
 
   def timer2_callback(self):  
-    self.get_logger().info('timer_callback lifecycle_service_client')
+    self.get_logger().info('timer2_callback lifecycle_service_client')
     while not self.service_client2.wait_for_service(timeout_sec=1.0):
         self.get_logger().info(f'service {self.service_client2.srv_name} not available, waiting...')
     request = SetParameters.Request()
@@ -119,7 +131,7 @@ class ServiceClient(Node):
     self.timer2.cancel()
 
   def timer3_callback(self):  
-    self.get_logger().info('timer_callback lifecycle_service_client')
+    self.get_logger().info('timer3_callback lifecycle_service_client')
     while not self.service_client3.wait_for_service(timeout_sec=1.0):
         self.get_logger().info(f'service {self.service_client3.srv_name} not available, waiting...')
     request = SetParameters.Request()
@@ -131,11 +143,38 @@ class ServiceClient(Node):
     self.future3.add_done_callback(self.response3_callback)
     self.timer3.cancel()
 
+  def timer4_callback(self):  
+    self.get_logger().info('timer4_callback lifecycle_service_client')
+    while not self.service_client4.wait_for_service(timeout_sec=1.0):
+        self.get_logger().info(f'service {self.service_client4.srv_name} not available, waiting...')
+    request = SetParameters.Request()
+    request.parameters = [Parameter(name= 'robot_radius',  
+            value=ParameterValue(
+                    type=ParameterType.PARAMETER_DOUBLE, 
+                    double_value= self.robot_radius))  ]
+    self.future4 = self.service_client4.call_async(request)
+    self.future4.add_done_callback(self.response4_callback)
+    self.timer4.cancel()
+
+  def timer5_callback(self):  
+    self.get_logger().info('timer5_callback lifecycle_service_client')
+    while not self.service_client5.wait_for_service(timeout_sec=1.0):
+        self.get_logger().info(f'service {self.service_client5.srv_name} not available, waiting...')
+    request = SetParameters.Request()
+    request.parameters = [Parameter(name= 'footprint',  
+            value=ParameterValue(
+                    type=ParameterType.PARAMETER_STRING, 
+                    string_value= self.robot_footprint))]
+    self.future5 = self.service_client3.call_async(request)
+    self.future5.add_done_callback(self.response5_callback)
+    self.timer5.cancel()
+
+
   def response_callback(self, future: Future):
     global nstate
     response = future.result()
     if response is not None:
-        #self.get_logger().info("Some Response happened")
+        self.get_logger().info("Some Response happened")
         if(response.complete):
             self.get_logger().info("response from service server: Success!")
             msgs_empty = String()
@@ -154,7 +193,7 @@ class ServiceClient(Node):
     global nstate
     response = future.result()
     if response is not None:
-        #self.get_logger().info("Some Response happened")
+        self.get_logger().info("Some Response2 happened")
         if(response.results[0].successful):
             self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
             nstate = nstates[2]
@@ -166,14 +205,28 @@ class ServiceClient(Node):
     else:
         self.get_logger().info("The response is None")
 
+  def response4_callback(self, future: Future):
+    global nstate
+    response = future.result()
+    if response is not None:
+        self.get_logger().info("Some Response4 happened")
+        if(response.results[0].successful):
+            self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
+            timer_period: float = 1.0
+            self.timer5 = self.create_timer(timer_period_sec=timer_period,callback=self.timer5_callback)
+        else:
+            self.get_logger().info("response from lifecycle service server: Failed!")
+            nstate = nstates[4]
+    else:
+        self.get_logger().info("The response is None")
+
   def response3_callback(self, future: Future):
     global nstate
     response = future.result()
     if response is not None:
-        #self.get_logger().info("Some Response happened")
+        self.get_logger().info("Some Response3 happened")
         if(response.results[0].successful):
             self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
-            nstate = nstates[3]
             self.navigator.waitUntilNav2Active()
             print('Got product from ' + self.request_item_location +
                 '! Bringing product to just before shipping destination (' + self.request_destination + ')...')
@@ -185,31 +238,6 @@ class ServiceClient(Node):
             just_before_shipping.pose.orientation.z = before_shipping[2]
             just_before_shipping.pose.orientation.w = before_shipping[3]
             self.navigator.goToPose(just_before_shipping)
-            # route_poses = []
-            # pose = PoseStamped()
-            # pose.header.frame_id = 'map'
-            # pose.header.stamp = self.navigator.get_clock().now().to_msg()
-            # pose.pose.orientation.w = 1.0
-            # for pt in security_route_return_journey:
-            #     pose.pose.position.x = pt[0]
-            #     pose.pose.position.y = pt[1]
-            #     route_poses.append(deepcopy(pose))
-            # self.navigator.goThroughPoses(route_poses)
-                   # Do something during your route (e.x. AI detection on camera images for anomalies)
-        # Print ETA for the demonstration
-        # i = 0
-        # while not self.navigator.isTaskComplete():
-        #     i = i + 1
-        #     feedback = self.navigator.getFeedback()
-        #     if feedback and i % 5 == 0:
-        #         print('Estimated time to complete current route: ' + '{0:.0f}'.format(
-        #               Duration.from_msg(feedback.estimated_time_remaining).nanoseconds / 1e9)
-        #               + ' seconds.')
-
-        #         # Some failure mode, must stop since the robot is clearly stuck
-        #         if Duration.from_msg(feedback.navigation_time) > Duration(seconds=180.0):
-        #             print('Navigation has exceeded timeout of 180s, canceling the request.')
-        #             self.navigator.cancelTask()
             while not self.navigator.isTaskComplete():
                     pass
             result = self.navigator.getResult()
@@ -231,14 +259,9 @@ class ServiceClient(Node):
                     msgs_empty = String()
                     self.publisher_liftdown.publish(msgs_empty)
                     print('Unloaded complete! Goto initial position')
-                    initial_position = PoseStamped()
-                    initial_position.header.frame_id = 'map'
-                    initial_position.header.stamp = self.navigator.get_clock().now().to_msg()
-                    initial_position.pose.position.x = initial_positions["initial_position"][0]
-                    initial_position.pose.position.y = initial_positions["initial_position"][1]
-                    initial_position.pose.orientation.z = initial_positions["initial_position"][2]
-                    initial_position.pose.orientation.w = initial_positions["initial_position"][3]
-                    self.navigator.goToPose(initial_position)
+                    timer_period: float = 1.0
+                    self.timer4 = self.create_timer(timer_period_sec=timer_period,callback=self.timer4_callback)
+
                 elif result == TaskResult.CANCELED:
                     print('Task at ' + self.request_item_location +
                         ' was canceled. Returning to staging point...')
@@ -259,6 +282,41 @@ class ServiceClient(Node):
         self.get_logger().info("The response is None")
     #print('leaving service node') 
     #rclpy.shutdown()
+ 
+  def response5_callback(self, future: Future):
+    global nstate
+    response = future.result()
+    if response is not None:
+        self.get_logger().info("Some Response5 happened")
+        if(response.results[0].successful):
+            self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
+            nstate = nstates[3]
+            self.navigator.waitUntilNav2Active()
+            print('Going back to initial_position')
+            initial_position = PoseStamped()
+            initial_position.header.frame_id = 'map'
+            initial_position.header.stamp = self.navigator.get_clock().now().to_msg()
+            initial_position.pose.position.x = initial_positions["initial_position"][0]
+            initial_position.pose.position.y = initial_positions["initial_position"][1]
+            initial_position.pose.orientation.z = initial_positions["initial_position"][2]
+            initial_position.pose.orientation.w = initial_positions["initial_position"][3]
+            self.navigator.goToPose(initial_position)
+            while not self.navigator.isTaskComplete():
+                    pass
+            result = self.navigator.getResult()
+            if result == TaskResult.SUCCEEDED:
+                print('Successfully reached initial position. Exit Program')
+                exit(0)
+            elif result == TaskResult.CANCELED:
+                print('Security route was canceled, exiting.')
+                exit(1)
+            elif result == TaskResult.FAILED:
+                print('Security route failed! Restarting from the other side...')
+            else:
+                self.get_logger().info("response from lifecycle service server: Failed!")
+                nstate = nstates[4]           
+    else:
+        self.get_logger().info("The response is None")
  
 
 
