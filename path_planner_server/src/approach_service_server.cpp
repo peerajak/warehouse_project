@@ -299,8 +299,9 @@ private:
   rclcpp::CallbackGroup::SharedPtr callback_group_3_laser;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
       subscription_3_laser;
-  const double precision_threshold = 0.01;
-
+  const double precision_threshold = 0.03;
+  const double precision2_threshold = 0.03;
+  const double precision_angular_threshold = 0.03;
   //--------4. Service related -----------//
   rclcpp::CallbackGroup::SharedPtr callback_group_4_service;
   rclcpp::Service<GoToLoading>::SharedPtr srv_4_service;
@@ -656,7 +657,7 @@ private:
                RCLCPP_INFO(this->get_logger(), "ling.angular.z: %f, target_yaw_rad: %f, precision_threshold %f",
                ling.angular.z, target_yaw_rad,precision_threshold);
                //ling.angular.z = scaleRotationRate*target_yaw_rad;  
-               if(abs(ttt.transform.translation.x) < precision_threshold && target_yaw_rad <precision_threshold){
+               if(abs(ttt.transform.translation.x) < precision_threshold && target_yaw_rad <precision_angular_threshold){
                   nstate = approach_shelf2;
                }            
            } else {
@@ -737,7 +738,7 @@ private:
                  current_pos_.x, current_pos_.y); 
           RCLCPP_INFO(this->get_logger(), "k_point_in_odom_coordinates position in odom cooordinate x: %f, y: %f",
          k_point_in_odom_coordinates.getX(),k_point_in_odom_coordinates.getY());  
-            if(abs(ttt2.transform.translation.x) <= precision_threshold){
+            if(abs(ttt2.transform.translation.x) <= precision2_threshold){
             ling.linear.x = 0;
             ling.linear.y = 0;
             ling.linear.z = 0;
