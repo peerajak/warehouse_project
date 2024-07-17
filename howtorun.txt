@@ -166,3 +166,4 @@ rcl_interfaces.srv.SetParameters_Response(results=[rcl_interfaces.msg.SetParamet
 user:~$
 
 
+~/sim_ws/install/the_construct_office_gazebo/share/the_construct_office_gazebo/launch

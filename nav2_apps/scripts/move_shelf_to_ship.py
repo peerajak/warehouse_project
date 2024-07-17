@@ -38,7 +38,7 @@ shelf_positions = {
 shipping_destinations = {
     "shipping": [2.5527113663089837, 1.4654144578316795,0.781185191773144,0.6242993642110779],
 }
-before_shipping = [4.092043659920394, -0.19048850942125184 , -0.9977004068537533, -0.06777830157104268]
+before_shipping = [2.3922234933879425, 0.004731793330113001 , 0.6911793760300523, 0.7226832433028371]
 security_route_return_journey = [
         [5.557730437379715,  -1.1],
         [5.557730437379715,  -0.9],
@@ -259,9 +259,23 @@ class ServiceClient(Node):
                     msgs_empty = String()
                     self.publisher_liftdown.publish(msgs_empty)
                     print('Unloaded complete! Goto initial position')
-                    timer_period: float = 1.0
-                    self.timer4 = self.create_timer(timer_period_sec=timer_period,callback=self.timer4_callback)
-
+                    shipping_destination = PoseStamped()
+                    shipping_destination.header.frame_id = 'map'
+                    shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
+                    shipping_destination.pose.position.x = shipping_destinations[self.request_destination][0]
+                    shipping_destination.pose.position.y = shipping_destinations[self.request_destination][1]
+                    shipping_destination.pose.orientation.z = -0.6612467802941838
+                    shipping_destination.pose.orientation.w = 0.7501684447846199
+                    self.navigator.goToPose(shipping_destination)
+                    while not self.navigator.isTaskComplete():
+                        pass
+                    result2 = self.navigator.getResult()
+                    if result2 == TaskResult.SUCCEEDED:
+                        timer_period: float = 1.0
+                        self.timer4 = self.create_timer(timer_period_sec=timer_period,callback=self.timer4_callback)
+                    else:                                     
+                        print('Task at rotate back shipping failed!')
+                        exit(-1)
                 elif result == TaskResult.CANCELED:
                     print('Task at ' + self.request_item_location +
                         ' was canceled. Returning to staging point...')
@@ -292,21 +306,34 @@ class ServiceClient(Node):
             self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
             nstate = nstates[3]
             self.navigator.waitUntilNav2Active()
-            print('Going back to initial_position')
-            initial_position = PoseStamped()
-            initial_position.header.frame_id = 'map'
-            initial_position.header.stamp = self.navigator.get_clock().now().to_msg()
-            initial_position.pose.position.x = initial_positions["initial_position"][0]
-            initial_position.pose.position.y = initial_positions["initial_position"][1]
-            initial_position.pose.orientation.z = initial_positions["initial_position"][2]
-            initial_position.pose.orientation.w = initial_positions["initial_position"][3]
-            self.navigator.goToPose(initial_position)
+            print('Going back to just before shipping_position')
+            just_before_shipping = PoseStamped()
+            just_before_shipping.header.frame_id = 'map'
+            just_before_shipping.header.stamp = self.navigator.get_clock().now().to_msg()
+            just_before_shipping.pose.position.x = before_shipping[0]
+            just_before_shipping.pose.position.y = before_shipping[1]
+            just_before_shipping.pose.orientation.z = -0.6612467802941838
+            just_before_shipping.pose.orientation.w = 0.7501684447846199
+            self.navigator.goToPose(just_before_shipping)
             while not self.navigator.isTaskComplete():
                     pass
             result = self.navigator.getResult()
             if result == TaskResult.SUCCEEDED:
-                print('Successfully reached initial position. Exit Program')
-                exit(0)
+                print('Going back to initial_position')
+                initial_position = PoseStamped()
+                initial_position.header.frame_id = 'map'
+                initial_position.header.stamp = self.navigator.get_clock().now().to_msg()
+                initial_position.pose.position.x = initial_positions["initial_position"][0]
+                initial_position.pose.position.y = initial_positions["initial_position"][1]
+                initial_position.pose.orientation.z = initial_positions["initial_position"][2]
+                initial_position.pose.orientation.w = initial_positions["initial_position"][3]
+                self.navigator.goToPose(initial_position)
+                while not self.navigator.isTaskComplete():
+                    pass
+                result2 = self.navigator.getResult()
+                if result2 == TaskResult.SUCCEEDED:
+                    print('Successfully reached initial position. Exit Program')
+                    exit(0)
             elif result == TaskResult.CANCELED:
                 print('Security route was canceled, exiting.')
                 exit(1)
