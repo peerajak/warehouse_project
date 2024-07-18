@@ -30,7 +30,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 nstates = ['ToPreload', 'AttachShelf', 'ToShipping', 'Rotating','EndProgramSuccess', 'EndProgramFailure']
 nstate = nstates[0]
 
-initial_positions = { "initial_position" :[ -0.001306453799679401,-5.637702989227117e-07,0.0005306560983933455, 0.9999998592020427 ]}
+initial_positions = { "initial_position" :[ -0.30038124210802383516,0.2,0.0,1.2 ]}
 # Shelf positions for picking
 shelf_positions = {
     "shelf_1": [5.779634686956881, 0.07032379500580269,-0.6874334536853087,0.726247372975826]}
@@ -154,7 +154,7 @@ class ServiceClient(Node):
                     double_value= self.robot_radius)), Parameter(name= 'inflation_radius',  
             value=ParameterValue(
                     type=ParameterType.PARAMETER_DOUBLE, 
-                    double_value= 0.06)) ]
+                    double_value= 0.1)) ]
     self.future4 = self.service_client4.call_async(request)
     self.future4.add_done_callback(self.response4_callback)
     self.timer4.cancel()
