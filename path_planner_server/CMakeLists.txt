@@ -32,8 +32,14 @@ add_executable(approach_service_server_node src/approach_service_server.cpp)
 ament_target_dependencies(approach_service_server_node
 rclcpp sensor_msgs geometry_msgs nav_msgs std_msgs custom_interfaces tf2 tf2_ros)
 
+add_executable(approach_service_server_realrobot_node src/approach_service_server_realrobot.cpp)
+ament_target_dependencies(approach_service_server_realrobot_node
+rclcpp sensor_msgs geometry_msgs nav_msgs std_msgs custom_interfaces tf2 tf2_ros)
+
+
 install(TARGETS
    approach_service_server_node
+   approach_service_server_realrobot_node
    DESTINATION lib/${PROJECT_NAME}
  )
 

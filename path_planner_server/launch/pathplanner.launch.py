@@ -15,14 +15,17 @@ def is_sim(context: LaunchContext, launchConfig):
     if(value == 'real'):
         sim_or_real_str = 'loading config_realrobot for real robot'
         bool_use_sim_time = False
+        attach_to_shelf_exec = 'approach_service_server_realrobot_node'
         controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller_realrobot.yaml')
         bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt_realrobot.yaml')      
         recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery_realrobot.yaml')
         planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'planner_server_realrobot.yaml')
+        filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'filter.yaml')
         cmd_vel_remapping = '/cmd_vel'
     else:
         sim_or_real_str = 'loading config for sim robot'
         bool_use_sim_time = True
+        attach_to_shelf_exec = 'approach_service_server_node'
         controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller.yaml')
         bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt.yaml') 
         recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery.yaml')
@@ -86,7 +89,7 @@ def is_sim(context: LaunchContext, launchConfig):
             msg=LaunchConfiguration('final_approach')),
         Node(
         package='path_planner_server',
-        executable='approach_service_server_node',
+        executable= attach_to_shelf_exec,
         output='screen',
         emulate_tty=True,
         arguments=["-obstacle", LaunchConfiguration(
