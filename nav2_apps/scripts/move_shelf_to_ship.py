@@ -30,7 +30,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 nstates = ['ToPreload', 'AttachShelf', 'ToShipping', 'Rotating','EndProgramSuccess', 'EndProgramFailure']
 nstate = nstates[0]
 
-initial_positions = { "initial_position" :[ -0.30038124210802383516,0.2,0.0,1.2 ]}
+initial_positions = { "initial_position" :[ -0.30038124210802383516,0.2,0.0,2.8 ]}
 # Shelf positions for picking
 shelf_positions = {
     "shelf_1": [5.779634686956881, 0.07032379500580269,-0.6874334536853087,0.726247372975826]}
