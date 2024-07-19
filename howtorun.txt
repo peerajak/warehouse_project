@@ -185,3 +185,10 @@ python3 ~/ros2_ws/src/warehouse_project/nav2_apps/scripts/move_shelf_to_ship_rea
 -- automatic localization
 - Terminal 4
 python3 ~/ros2_ws/src/warehouse_project/nav2_apps/scripts/AutomatedLocalization.py
+
+
+Lifting the cart with CLI
+ros2 topic pub /elevator_up std_msgs/msg/String data:\ \'\'\ 
+
+unlift the cart with CLI
+ros2 topic pub /elevator_down std_msgs/msg/String data:\ \'\'\ 

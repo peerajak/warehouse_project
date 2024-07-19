@@ -31,12 +31,12 @@ realrobot_move_topic = '/cmd_vel'
 simrobot_move_topic = '/diffbot_base_controller/cmd_vel_unstamped'
 
 # Shelf positions for picking
-shelf_positions = [ 3.5, -1.5,0.7938911945621069,-0.6080598417892362]
-shelf_positions_reverse = [3.5, -1.5, -0.9792658753497765,-0.20257923233993155]
+shelf_positions = [ 3.5, -1.7,0.7938911945621069,-0.6080598417892362]
+shelf_positions_reverse = [3.5, -1.7, -0.9792658753497765,-0.20257923233993155]
 before_shipping = [1.72,0.3,-0.9230358322434521,-0.3847139877813617]
 before_shipping_reverse = [1.72,0.3,-0.3929562957056833,0.9195571486673721]
-shipping_destinations = []
-shipping_destinations_reverse = []
+shipping_destinations = [1.72,1.3,-0.9230358322434521,-0.3847139877813617]
+shipping_destinations_reverse = [1.72,1.3,-0.3929562957056833,0.9195571486673721]
 class LocalizeNode(Node):
 
     def __init__(self):
@@ -158,8 +158,8 @@ class ServiceClient(Node):
 
     self.robot_radius = 0.15
     self.robot_footprint = '[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]'
-    self.robot_with_cart_radius = 0.28
-    self.robot_with_cart_footprint = '[ [0.5, 0.28], [0.5, -0.28], [-0.5, -0.28], [-0.5, 0.28] ]'
+    self.robot_with_cart_radius = 0.17
+    self.robot_with_cart_footprint = '[ [0.17, 0.17], [0.17, -0.17], [-0.17, -0.17], [-0.17, 0.17] ]'
 
     timer_period: float = 1.0
     self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
@@ -190,7 +190,10 @@ class ServiceClient(Node):
     request.parameters = [Parameter(name= 'robot_radius',  
             value=ParameterValue(
                     type=ParameterType.PARAMETER_DOUBLE, 
-                    double_value= self.robot_with_cart_radius))  ]#0.7071068
+                    double_value= self.robot_with_cart_radius)), Parameter(name= 'inflation_radius',  
+            value=ParameterValue(
+                    type=ParameterType.PARAMETER_DOUBLE, 
+                    double_value= 0.1))  ]#0.7071068
     self.future2 = self.service_client2.call_async(request)
     self.future2.add_done_callback(self.response2_callback)
     self.timer2.cancel()
