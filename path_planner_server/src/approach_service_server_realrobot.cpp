@@ -419,7 +419,7 @@ private:
        RCLCPP_INFO(this->get_logger(),"laser() service_activated");
       if (!tf_published) {
      RCLCPP_INFO(this->get_logger(),"Publishing TF");
-        int smallest_allowable_group = 8;
+        int smallest_allowable_group = 5;
         std::vector<group_of_laser> aggregation_of_groups_of_lasers;
         std::shared_ptr<group_of_laser> gl(new group_of_laser(laser_intensity_threshold));
 
@@ -647,17 +647,15 @@ private:
             double scaleRotationRate = 0.6;
              double scaleForwardSpeed = 1.0;
             //double magnitude_of_ttt_linear = magnitude_of_vector(ttt.transform.translation.x,ttt.transform.translation.y);
-            //ling.linear.x = helper_fn_sqrt_01(scaleForwardSpeed *  ttt.transform.translation.x);
-            //TODO ling.linear.x = scaleForwardSpeed *  ttt.transform.translation.x;
+            ling.linear.x = scaleForwardSpeed *  ttt.transform.translation.x;
             ling.linear.y = 0;
             if(abs(ttt.transform.translation.x) <= precision_threshold){
                double target_yaw_rad = yaw_theta_from_quaternion(
                 ttt.transform.rotation.x, ttt.transform.rotation.y,
                 ttt.transform.rotation.z, ttt.transform.rotation.w);
-               //TODO ling.angular.z =  helper_fn_sqrt_01(scaleRotationRate*target_yaw_rad);  
+               ling.angular.z =  helper_fn_sqrt_01(scaleRotationRate*target_yaw_rad);  
                RCLCPP_INFO(this->get_logger(), "ling.angular.z: %f, target_yaw_rad: %f, precision_threshold %f",
                ling.angular.z, target_yaw_rad,precision_threshold);
-               //ling.angular.z = scaleRotationRate*target_yaw_rad;  
                if(abs(ttt.transform.translation.x) < precision_threshold && target_yaw_rad <precision_angular_threshold){
                   nstate = approach_shelf2;
                }            
@@ -727,11 +725,9 @@ private:
             double target_yaw_rad = yaw_theta_from_quaternion(
             ttt2.transform.rotation.x, ttt2.transform.rotation.y,
             ttt2.transform.rotation.z, ttt2.transform.rotation.w);
-            //ling.angular.z = helper_fn_sqrt_01(scaleRotationRate*target_yaw_rad);   
-            //TODO ling.angular.z = scaleRotationRate*target_yaw_rad;  
+            ling.angular.z = scaleRotationRate*target_yaw_rad;  
             double scaleForwardSpeed = 1.0;
-            //TODO ling.linear.x =scaleForwardSpeed * ttt2.transform.translation.x;
-            //ling.linear.x = helper_fn_sqrt_01(scaleForwardSpeed * ttt2.transform.translation.x);
+            ling.linear.x =scaleForwardSpeed * ttt2.transform.translation.x;
             ling.linear.y = 0;
             RCLCPP_INFO(this->get_logger(), "ttt2.x: %f, ttt2.y: %f",ttt2.transform.translation.x,ttt2.transform.translation.y);    
                

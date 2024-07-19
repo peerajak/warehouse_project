@@ -19,8 +19,11 @@ is_odom_initialized = False
 localize_threshold = [0.03 ,0.03,0.03]
 initial_positions = [ 0,0,0,0 ]
 
+realrobot_move_topic = '/cmd_vel'
+simrobot_move_topic = '/diffbot_base_controller/cmd_vel_unstamped'
+
 # Shelf positions for picking
-shelf_positions = [5.729634686956881, 0.07032379500580269,-0.6874334536853087,0.726247372975826]
+shelf_positions = [ 3.5, -1.5,0.7938911945621069,-0.6080598417892362]
 class LocalizeNode(Node):
 
     def __init__(self):
@@ -42,7 +45,7 @@ class LocalizeNode(Node):
         self.timer2 = self.create_timer(timer_period_sec=timer2_period,callback=self.timer2_callback,callback_group=my_callback_group)
         self.publisher_rotate = self.create_publisher(
             msg_type=Twist,
-            topic='/diffbot_base_controller/cmd_vel_unstamped',qos_profile=1)
+            topic=realrobot_move_topic,qos_profile=1)
         self.future: Future = None
 
     def amcl_listener_callback(self, msg):
@@ -146,6 +149,7 @@ def main():
     shelf_item_pose.pose.orientation.z =shelf_positions[2]
     shelf_item_pose.pose.orientation.w =shelf_positions[3]
     #print('Received request for item picking at ' + request_item_location + '.')
+    print(initial_positions)
     navigator.goToPose(shelf_item_pose)
     
 if __name__ == '__main__':
