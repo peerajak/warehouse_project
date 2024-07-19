@@ -302,6 +302,7 @@ private:
   const double precision_threshold = 0.03;
   const double precision2_threshold = 0.03;
   const double precision_angular_threshold = 0.03;
+  const double laser_intensity_threshold = 2700;
   //--------4. Service related -----------//
   rclcpp::CallbackGroup::SharedPtr callback_group_4_service;
   rclcpp::Service<GoToLoading>::SharedPtr srv_4_service;
@@ -418,9 +419,9 @@ private:
        RCLCPP_INFO(this->get_logger(),"laser() service_activated");
       if (!tf_published) {
      RCLCPP_INFO(this->get_logger(),"Publishing TF");
-        int smallest_allowable_group = 3;
+        int smallest_allowable_group = 8;
         std::vector<group_of_laser> aggregation_of_groups_of_lasers;
-        std::shared_ptr<group_of_laser> gl(new group_of_laser(2000));
+        std::shared_ptr<group_of_laser> gl(new group_of_laser(laser_intensity_threshold));
 
         long unsigned int i = 0;
         while (i < msg->ranges.size()) {
@@ -449,7 +450,7 @@ private:
           }
           if (gl->_state == group_of_laser::insertable_state::full) {
             RCLCPP_INFO(this->get_logger(), "groups of laser full at %ld", i);
-            gl = std::make_shared<group_of_laser>(2000);
+            gl = std::make_shared<group_of_laser>(laser_intensity_threshold);
             RCLCPP_INFO(this->get_logger(), "new gl created state %d",
                         gl->_state);
           }

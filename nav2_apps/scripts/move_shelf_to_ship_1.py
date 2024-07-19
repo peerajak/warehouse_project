@@ -16,6 +16,7 @@
 import time
 from copy import deepcopy
 import shutil
+from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
 from custom_interfaces.srv import GoToLoading
@@ -25,9 +26,12 @@ from rclpy.task import Future
 from rclpy.node import Node
 import rclpy
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+from rclpy.qos import ReliabilityPolicy, QoSProfile
 
 nstates = ['ToPreload', 'AttachShelf', 'ToShipping','EndProgramSuccess', 'EndProgramFailure']
 nstate = nstates[0]
+
+is_odom_initialized = False
 
 # Shelf positions for picking
 shelf_positions = {
@@ -37,6 +41,31 @@ shelf_positions = {
 shipping_destinations = {
     "shipping": [2.5069296916199484, 1.3907159489075767,0.756143318789467,0.6544060524246781],
 }
+initial_positions = [ 0,0,0,0 ]
+
+class OdomSubscriber(Node):
+
+    def __init__(self):
+        super().__init__('minimal_subscriber')
+        self.subscriber_odom = self.create_subscription(
+                Odometry,
+                '/odom',
+                self.odom_callback,
+                QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
+
+
+    def odom_callback(self, msg2):
+        global initial_positions 
+        global is_odom_initialized
+        position = msg2.pose.pose.position
+        orientation = msg2.pose.pose.orientation
+        (initial_positions[0], initial_positions[1], posz) = (position.x, position.y, position.z)
+        (qx, qy, initial_positions[2], initial_positions[3]) = (orientation.x, orientation.y, orientation.z, orientation.w)
+        is_odom_initialized = True
+
+
+
+
 
 '''
 Basic item picking demo. In this demonstration, the expectation
@@ -52,6 +81,8 @@ class ServiceClient(Node):
     self.request_item_location = request_item_location
     self.request_destination = request_destination
     my_callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
+
+
     self.service_client = self.create_client(
             srv_type=GoToLoading,
             srv_name="/approach_shelf",
@@ -72,7 +103,7 @@ class ServiceClient(Node):
 
     timer_period: float = 1.0
     self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
-    self.publisher_lift = self.create_publisher(
+    self.publisher_lift = self.create_subscription(
             msg_type=String,
             topic='/elevator_up',
             qos_profile=1)
@@ -203,19 +234,26 @@ def main():
     request_destination = 'shipping'
     ####################
 
+    odom_subscriber = OdomSubscriber()
 
 
+    while not is_odom_initialized:
+        rclpy.spin_once(odom_subscriber)
+        print('waiting odom data..')
+        time.sleep(0.1)
+
+    odom_subscriber.destroy_node()
     navigator = BasicNavigator()
-
     # Set your demo's initial pose
     initial_pose = PoseStamped()
     initial_pose.header.frame_id = 'map'
     initial_pose.header.stamp = navigator.get_clock().now().to_msg()
-    initial_pose.pose.position.x = -0.0043595783091967205
-    initial_pose.pose.position.y = float(-8.493102018902478e-06)
-    initial_pose.pose.orientation.z = 0.0020702609325826864
-    initial_pose.pose.orientation.w = 0.9999978570075393
+    initial_pose.pose.position.x =initial_positions[0]
+    initial_pose.pose.position.y = initial_positions[1]
+    initial_pose.pose.orientation.z = initial_positions[2]
+    initial_pose.pose.orientation.w = initial_positions[3]
     navigator.setInitialPose(initial_pose)
+
 
     # Wait for navigation to activate fully
     navigator.waitUntilNav2Active()

@@ -20,7 +20,7 @@ def is_sim(context: LaunchContext, launchConfig):
         bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt_realrobot.yaml')      
         recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery_realrobot.yaml')
         planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'planner_server_realrobot.yaml')
-        filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'filter.yaml')
+        filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'filter_realrobot.yaml')
         cmd_vel_remapping = '/cmd_vel'
     else:
         sim_or_real_str = 'loading config for sim robot'

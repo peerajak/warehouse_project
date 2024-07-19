@@ -116,6 +116,10 @@ ros2 launch path_planner_server pathplanner.launch.py env_type:=sim
 
 - Terminal 4
 python3 ~/ros2_ws/src/warehouse_project/nav2_apps/scripts/move_shelf_to_ship.py
+-- automatic localization
+- Terminal 4
+python3 ~/ros2_ws/src/warehouse_project/nav2_apps/scripts/AutomatedLocalization.py
+
 
 Lifecycle manager by CLI
 pause node
@@ -167,3 +171,14 @@ user:~$
 
 
 ~/sim_ws/install/the_construct_office_gazebo/share/the_construct_office_gazebo/launch
+
+------------------- Real Robot ------------------------------
+- Terminal 1
+ros2 launch localization_server localization.launch.py map_file:=warehouse_map_real.yaml
+
+- Terminal 2
+ros2 launch path_planner_server pathplanner.launch.py env_type:=real
+
+- Terminal 3
+python3 ~/ros2_ws/src/warehouse_project/nav2_apps/scripts/move_shelf_to_ship_realrobot.py
+
