@@ -33,10 +33,10 @@ simrobot_move_topic = '/diffbot_base_controller/cmd_vel_unstamped'
 # Shelf positions for picking
 shelf_positions = [ 3.5, -1.7,0.7938911945621069,-0.6080598417892362]
 shelf_positions_reverse = [3.5, -1.7, -0.9792658753497765,-0.20257923233993155]
-before_shipping = [1.72,0.3,-0.9230358322434521,-0.3847139877813617]
-before_shipping_reverse = [1.72,0.3,-0.3929562957056833,0.9195571486673721]
-shipping_destinations = [1.72,1.3,-0.9230358322434521,-0.3847139877813617]
-shipping_destinations_reverse = [1.72,1.3,-0.3929562957056833,0.9195571486673721]
+before_shipping = [1.72,-1.7,-0.9230358322434521,-0.3847139877813617]
+before_shipping_reverse = [1.32,-1.7,-0.3929562957056833,0.9195571486673721]
+shipping_destinations = [1.52,0.8,-0.9230358322434521,-0.3847139877813617]
+shipping_destinations_reverse = [1.52,0.8,-0.3929562957056833,0.9195571486673721]
 class LocalizeNode(Node):
 
     def __init__(self):
@@ -158,8 +158,9 @@ class ServiceClient(Node):
 
     self.robot_radius = 0.15
     self.robot_footprint = '[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]'
-    self.robot_with_cart_radius = 0.17
-    self.robot_with_cart_footprint = '[ [0.17, 0.17], [0.17, -0.17], [-0.17, -0.17], [-0.17, 0.17] ]'
+    self.robot_with_cart_radius = 0.25
+    self.robot_with_cart_footprint = '[ [0.25, 0.25], [0.25, -0.25], [-0.25, -0.25], [-0.25, 0.25] ]'
+    self.cart_inflation_radius = 0.2    
 
     timer_period: float = 1.0
     self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
@@ -193,7 +194,7 @@ class ServiceClient(Node):
                     double_value= self.robot_with_cart_radius)), Parameter(name= 'inflation_radius',  
             value=ParameterValue(
                     type=ParameterType.PARAMETER_DOUBLE, 
-                    double_value= 0.1))  ]#0.7071068
+                    double_value= self.cart_inflation_radius))  ]#0.7071068
     self.future2 = self.service_client2.call_async(request)
     self.future2.add_done_callback(self.response2_callback)
     self.timer2.cancel()
@@ -222,6 +223,20 @@ class ServiceClient(Node):
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
             nstate = nstates[2]
+            self.get_logger().info('Lifted product from ')
+            just_before_shipping = PoseStamped()
+            just_before_shipping.header.frame_id = 'map'
+            just_before_shipping.header.stamp = self.navigator.get_clock().now().to_msg()
+            just_before_shipping.pose.position.x = before_shipping[0]
+            just_before_shipping.pose.position.y = before_shipping[1]
+            just_before_shipping.pose.orientation.z = before_shipping[2]
+            just_before_shipping.pose.orientation.w = before_shipping[3]
+            self.navigator.waitUntilNav2Active()
+            self.navigator.goToPose(just_before_shipping)
+            while not self.navigator.isTaskComplete():
+                self.get_logger().info('waiting nav to complete')
+                pass
+            print('just before complete!')
             timer_period: float = 1.0
             self.timer2 = self.create_timer(timer_period_sec=timer_period,callback=self.timer2_callback)
         else:
@@ -266,121 +281,110 @@ class ServiceClient(Node):
     global nstate
     response = future.result()
     if response is not None:
-        self.get_logger().info("Some Response3 happened")
-        if(response.results[0].successful):
-            self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
-            self.navigator.waitUntilNav2Active()
-            print('Got product from ' + self.request_item_location +
-                '! Bringing product to just before shipping destination (' + self.request_destination + ')...')
-            just_before_shipping = PoseStamped()
-            just_before_shipping.header.frame_id = 'map'
-            just_before_shipping.header.stamp = self.navigator.get_clock().now().to_msg()
-            just_before_shipping.pose.position.x = before_shipping[0]
-            just_before_shipping.pose.position.y = before_shipping[1]
-            just_before_shipping.pose.orientation.z = before_shipping[2]
-            just_before_shipping.pose.orientation.w = before_shipping[3]
-            self.navigator.goToPose(just_before_shipping)
-            while not self.navigator.isTaskComplete():
-                    pass
-            result = self.navigator.getResult()
-            if result == TaskResult.SUCCEEDED:
-                print('just before complete! Goto shipping destination')
-                shipping_destination = PoseStamped()
-                shipping_destination.header.frame_id = 'map'
-                shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
-                shipping_destination.pose.position.x = shipping_destinations[0]
-                shipping_destination.pose.position.y = shipping_destinations[1]
-                shipping_destination.pose.orientation.z = shipping_destinations[2]
-                shipping_destination.pose.orientation.w = shipping_destinations[3]
-                self.navigator.goToPose(shipping_destination)
-                while not self.navigator.isTaskComplete():
-                    pass
-                result1 = self.navigator.getResult()
-                if result1 == TaskResult.SUCCEEDED:
-                    print('Arrived shipping destination (' + self.request_destination + ')...')
-                    msgs_empty = String()
-                    self.publisher_liftdown.publish(msgs_empty)
-                    print('Unloaded complete! Goto initial position')
-                    timer_period: float = 1.0
-                    self.timer4 = self.create_timer(timer_period_sec=timer_period,callback=self.timer4_callback)
-                    self.timer5 = self.create_timer(timer_period_sec=timer_period,callback=self.timer5_callback)
-                    self.is_parameter4_complete = False
-                    self.is_parameter5_complete = False
-                    while (not self.is_parameter4_complete) or (not self.is_parameter5_complete):
-                        time.sleep(0.1) 
-                        print('Waiting or footprint and robot_radius reset')
-                    nstate = nstates[3]
-                    shipping_destination = PoseStamped()
-                    shipping_destination.header.frame_id = 'map'
-                    shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
-                    shipping_destination.pose.position.x = shipping_destinations_reverse[0]
-                    shipping_destination.pose.position.y = shipping_destinations_reverse[1]
-                    shipping_destination.pose.orientation.z = shipping_destinations_reverse[3]
-                    shipping_destination.pose.orientation.w = shipping_destinations_reverse[4]
-                    self.navigator.goToPose(shipping_destination)
-                    while not self.navigator.isTaskComplete():
-                        pass
-                    result2 = self.navigator.getResult()
-                    if result2 == TaskResult.SUCCEEDED:
-                        print('Task at rotate back shipping Success!')
-                    self.navigator.waitUntilNav2Active()
-                    print('Going back to just before shipping_position')
-                    just_before_shipping = PoseStamped()
-                    just_before_shipping.header.frame_id = 'map'
-                    just_before_shipping.header.stamp = self.navigator.get_clock().now().to_msg()
-                    just_before_shipping.pose.position.x = before_shipping_reverse[0]
-                    just_before_shipping.pose.position.y = before_shipping_reverse[1]
-                    just_before_shipping.pose.orientation.z = before_shipping_reverse[2]
-                    just_before_shipping.pose.orientation.w = before_shipping_reverse[3]
-                    self.navigator.goToPose(just_before_shipping)
-                    while not self.navigator.isTaskComplete():
-                            pass
-                    result3 = self.navigator.getResult()
-                    if result3 == TaskResult.SUCCEEDED:
-                        print('Going back to initial_position')
-                        initial_position = PoseStamped()
-                        initial_position.header.frame_id = 'map'
-                        initial_position.header.stamp = self.navigator.get_clock().now().to_msg()
-                        initial_position.pose.position.x = initial_positions["initial_position"][0]
-                        initial_position.pose.position.y = initial_positions["initial_position"][1]
-                        initial_position.pose.orientation.z = initial_positions["initial_position"][2]
-                        initial_position.pose.orientation.w = initial_positions["initial_position"][3]
-                        self.navigator.goToPose(initial_position)
-                        while not self.navigator.isTaskComplete():
-                            pass
-                        result4 = self.navigator.getResult()
-                        if result4 == TaskResult.SUCCEEDED:
-                            print('Successfully reached initial position. Exit Program')
-                            nstate = nstates[4] 
-                            exit(0)
-                        elif result4 == TaskResult.CANCELED:
-                            print('Security route was canceled, exiting.')
-                            exit(1)
-                        elif result4 == TaskResult.FAILED:
-                            print('Security route failed! Restarting from the other side...')
-                        else:
-                            self.get_logger().info("response from lifecycle service server: Failed!")
-                            nstate = nstates[5]  
-                    else:                                     
-                        print('Task at return just_before_shipping failed!')
-                        nstate = nstates[4]
-                        exit(-1)
-                elif result1 == TaskResult.CANCELED:
-                    print('Task at ' + self.request_item_location +
-                        ' was canceled. Returning to staging point...')
-                elif result1 == TaskResult.FAILED:
-                    print('Task at ' + self.request_item_location + ' failed!')
-                    exit(-1)
-                while not self.navigator.isTaskComplete():
-                    pass
-            elif result == TaskResult.CANCELED:
-                print('Security route was canceled, exiting.')
-                exit(1)
-            elif result == TaskResult.FAILED:
-                print('Security route failed! Restarting from the other side...')
-            else:
-                self.get_logger().info("response from lifecycle service server: Failed!")
-                nstate = nstates[5]           
+        self.get_logger().info("Some Response3 happened %d" % (response.results[0].successful))
+        # if(response.results[0].successful):
+        #     self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
+            # self.navigator.waitUntilNav2Active()
+
+        # result = self.navigator.getResult()
+        #     if result == TaskResult.SUCCEEDED:
+        print('Goto shipping destination')
+        shipping_destination = PoseStamped()
+        shipping_destination.header.frame_id = 'map'
+        shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
+        shipping_destination.pose.position.x = shipping_destinations[0]
+        shipping_destination.pose.position.y = shipping_destinations[1]
+        shipping_destination.pose.orientation.z = shipping_destinations[2]
+        shipping_destination.pose.orientation.w = shipping_destinations[3]
+        self.navigator.goToPose(shipping_destination)
+        while not self.navigator.isTaskComplete():
+            pass
+        # result1 = self.navigator.getResult()
+        #         if result1 == TaskResult.SUCCEEDED:
+        print('Arrived shipping destination (' + self.request_destination + ')...')
+        msgs_empty = String()
+        self.publisher_liftdown.publish(msgs_empty)
+        print('Unloaded complete! Goto initial position')
+        timer_period: float = 1.0
+        self.timer4 = self.create_timer(timer_period_sec=timer_period,callback=self.timer4_callback)
+        self.timer5 = self.create_timer(timer_period_sec=timer_period,callback=self.timer5_callback)
+        self.is_parameter4_complete = False
+        self.is_parameter5_complete = False
+        while (not self.is_parameter4_complete) or (not self.is_parameter5_complete):
+            time.sleep(0.1) 
+        print('Waiting or footprint and robot_radius reset')
+        nstate = nstates[3]
+        shipping_destination = PoseStamped()
+        shipping_destination.header.frame_id = 'map'
+        shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
+        shipping_destination.pose.position.x = shipping_destinations_reverse[0]
+        shipping_destination.pose.position.y = shipping_destinations_reverse[1]
+        shipping_destination.pose.orientation.z = shipping_destinations_reverse[3]
+        shipping_destination.pose.orientation.w = shipping_destinations_reverse[4]
+        self.navigator.goToPose(shipping_destination)
+        while not self.navigator.isTaskComplete():
+            pass
+        result2 = self.navigator.getResult()
+        if result2 == TaskResult.SUCCEEDED:
+            print('Task at rotate back shipping Success!')
+        #self.navigator.waitUntilNav2Active()
+        print('Going back to just before shipping_position')
+        just_before_shipping = PoseStamped()
+        just_before_shipping.header.frame_id = 'map'
+        just_before_shipping.header.stamp = self.navigator.get_clock().now().to_msg()
+        just_before_shipping.pose.position.x = before_shipping_reverse[0]
+        just_before_shipping.pose.position.y = before_shipping_reverse[1]
+        just_before_shipping.pose.orientation.z = before_shipping_reverse[2]
+        just_before_shipping.pose.orientation.w = before_shipping_reverse[3]
+        self.navigator.goToPose(just_before_shipping)
+        while not self.navigator.isTaskComplete():
+                pass
+                    # result3 = self.navigator.getResult()
+                    # if result3 == TaskResult.SUCCEEDED:
+        print('Going back to initial_position')
+        initial_position = PoseStamped()
+        initial_position.header.frame_id = 'map'
+        initial_position.header.stamp = self.navigator.get_clock().now().to_msg()
+        initial_position.pose.position.x = initial_positions["initial_position"][0]
+        initial_position.pose.position.y = initial_positions["initial_position"][1]
+        initial_position.pose.orientation.z = initial_positions["initial_position"][2]
+        initial_position.pose.orientation.w = initial_positions["initial_position"][3]
+        self.navigator.goToPose(initial_position)
+        while not self.navigator.isTaskComplete():
+            pass
+            #             result4 = self.navigator.getResult()
+            #             if result4 == TaskResult.SUCCEEDED:
+            #                 print('Successfully reached initial position. Exit Program')
+            #                 nstate = nstates[4] 
+            #                 exit(0)
+            #             elif result4 == TaskResult.CANCELED:
+            #                 print('Security route was canceled, exiting.')
+            #                 exit(1)
+            #             elif result4 == TaskResult.FAILED:
+            #                 print('Security route failed! Restarting from the other side...')
+            #             else:
+            #                 self.get_logger().info("response from lifecycle service server: Failed!")
+            #                 nstate = nstates[5]  
+            #         else:                                     
+            #             print('Task at return just_before_shipping failed!')
+            #             nstate = nstates[4]
+            #             exit(-1)
+            #     elif result1 == TaskResult.CANCELED:
+            #         print('Task at ' + self.request_item_location +
+            #             ' was canceled. Returning to staging point...')
+            #     elif result1 == TaskResult.FAILED:
+            #         print('Task at ' + self.request_item_location + ' failed!')
+            #         exit(-1)
+            #     while not self.navigator.isTaskComplete():
+            #         pass
+            # elif result == TaskResult.CANCELED:
+            #     print('Security route was canceled, exiting.')
+            #     exit(1)
+            # elif result == TaskResult.FAILED:
+            #     print('Security route failed! Restarting from the other side...')
+            # else:
+            #     self.get_logger().info("response from lifecycle service server: Failed!")
+            #     nstate = nstates[5]           
     else:
         self.get_logger().info("The response is None")
     #print('leaving service node') 
