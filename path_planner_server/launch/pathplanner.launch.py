@@ -6,8 +6,34 @@ from launch.actions import LogInfo,DeclareLaunchArgument,RegisterEventHandler
 from launch.event_handlers import OnProcessExit,OnExecutionComplete
 from launch.substitutions import LaunchConfiguration
 from launch.actions import OpaqueFunction
+from launch.events.process.process_exited import ProcessExited
+
+cmd_vel_remapping = ''
+attach_to_shelf_exec=''
+
+def controller_description():
+    LogInfo(
+            msg=LaunchConfiguration('Restarting ' + attach_to_shelf_exec))
+    return Node(
+        package='path_planner_server',
+        executable= attach_to_shelf_exec,
+        output='screen',
+        emulate_tty=True,
+        arguments=["-obstacle", LaunchConfiguration(
+                'obstacle') ],
+        remappings=[('/cmd_vel', cmd_vel_remapping),]
+    )
+
+
+def on_exit_restart(event:ProcessExited, context:LaunchContext):
+    print("\n\nProcess [{}] exited, pid: {}, return code: {}\n\n".format(
+        event.action.name, event.pid, event.returncode))
+    return controller_description() # respawn node actio
+
 
 def is_sim(context: LaunchContext, launchConfig):
+    global cmd_vel_remapping
+    global attach_to_shelf_exec
     value = context.perform_substitution(launchConfig)  
     # RVIZ Configuration
     # package_description = "path_planner_server"
@@ -47,6 +73,15 @@ def is_sim(context: LaunchContext, launchConfig):
                                         'filter_mask_server',
                                         'costmap_filter_info_server'
                                         ]}])
+    attach_shelf_node = Node(
+        package='path_planner_server',
+        executable= attach_to_shelf_exec,
+        output='screen',
+        emulate_tty=True,
+        arguments=["-obstacle", LaunchConfiguration(
+                'obstacle') ],
+        remappings=[('/cmd_vel', cmd_vel_remapping),]
+        )
 
     return  [LogInfo(msg=sim_or_real_str),
         Node(
@@ -87,15 +122,7 @@ def is_sim(context: LaunchContext, launchConfig):
             msg=LaunchConfiguration('degrees')),
         LogInfo(
             msg=LaunchConfiguration('final_approach')),
-        Node(
-        package='path_planner_server',
-        executable= attach_to_shelf_exec,
-        output='screen',
-        emulate_tty=True,
-        arguments=["-obstacle", LaunchConfiguration(
-                'obstacle') ],
-        remappings=[('/cmd_vel', cmd_vel_remapping),]
-        ),
+        attach_shelf_node,
         Node(
             package='nav2_map_server',
             executable='map_server',
@@ -111,6 +138,12 @@ def is_sim(context: LaunchContext, launchConfig):
             output='screen',
             emulate_tty=True,
             parameters=[filters_yaml]),   
+            RegisterEventHandler(# Call attach_to_shelf_exec everytime it exits
+            OnProcessExit(
+                target_action=attach_shelf_node,
+                on_exit=on_exit_restart
+            )
+        ),
     #  Node(
     #         package='rviz2',
     #         executable='rviz2',

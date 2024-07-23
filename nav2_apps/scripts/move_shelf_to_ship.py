@@ -28,9 +28,7 @@ class TheState(Enum):
     EndProgramFailure = 8
 
 
-#nstates = ['ToPreload', 'AttachShelf', 'ToBeforeShipping', 'ToShipping',
-#             'BackToBeforeShipping', 'BackToInitialPosition',
-#            'EndProgramSuccess', 'EndProgramFailure']
+
 nstate = TheState.ToPreload
 is_localmap_param_set = False
 is_globalmap_param_set = False
@@ -42,6 +40,8 @@ initial_positions = [-0.0043595783091967205,float(-8.493102018902478e-06),
 
 shelf_positions = [5.779634686956881, 0.07032379500580269,
         -0.6874334536853087,0.726247372975826]
+# shelf_positions = [5.779634686956881, 0.07032379500580269,
+# -0.6874334536853087,0.726247372975826]
 
 shipping_destinations = [2.5527113663089837, 1.4654144578316795,
     0.781185191773144,0.6242993642110779]
@@ -217,7 +217,10 @@ class ServiceClient(Node):
             self.get_logger().info("response from service server: Success!")
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
-            nstate = TheState.ToBeforeShipping
+            if nstate == TheState.AttachShelf:
+                nstate = TheState.ToBeforeShipping
+            elif nstate == TheState.ToShippingReverse:
+                nstate = TheState.BackToBeforeShipping
         else:
             self.get_logger().info("response from service server: Failed!")
             nstate = TheState.EndProgramFailure
@@ -355,11 +358,7 @@ def main():
             is_to_shipping_success = nstate_change_to_navigation_result(navigator.getResult(),
                  TheState.ToShippingReverse, TheState.EndProgramFailure)
             robot_radius /= 2
-        lift_down_node = LiftUpDown(False)
-        while (not is_lifting_done):
-                rclpy.spin_once(lift_down_node)
-                print('lifting')
-                time.sleep(0.05)
+
     else:
         print('some state logic failure at '+nstate.name)
         return
@@ -394,6 +393,18 @@ def main():
                  TheState.BackToBeforeShipping, TheState.EndProgramFailure)
             robot_radius /= 2
 
+        lift_down_node = LiftUpDown(False)
+        while (not is_lifting_done):
+                rclpy.spin_once(lift_down_node)
+                print('lifting')
+                time.sleep(0.05)
+                
+        service_client_node2 = ServiceClient()    
+        while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
+            rclpy.spin_once(service_client_node2)
+            print('at main '+nstate.name)           
+            if nstate == TheState.BackToBeforeShipping:
+                break
     else:
         print('some state logic failure at '+nstate.name)
         return

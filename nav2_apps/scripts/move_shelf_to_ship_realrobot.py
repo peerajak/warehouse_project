@@ -4,6 +4,7 @@
 import time
 from copy import deepcopy
 import shutil
+from enum import Enum
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from std_msgs.msg import String
@@ -46,13 +47,13 @@ simrobot_move_topic = '/diffbot_base_controller/cmd_vel_unstamped'
 
 
 
-initial_positions = [ 0,0,0,0 ]
+initial_positions = [-0.9,-0.3,0.1,0.999]
 
-shelf_positions = [ 3.5, -1.7,0.7938911945621069,-0.6080598417892362]
+shelf_positions = [ 3.7, -1.7,0.7938911945621069,-0.6080598417892362]
 
-shipping_destinations = [1.52,0.8,-0.9230358322434521,-0.3847139877813617]
+shipping_destinations = [1.3,0.6,-0.4,-0.3847139877813617]
 
-shipping_destinations_reverse = [1.52,0.8,-0.3929562957056833,0.9195571486673721]
+shipping_destinations_reverse = [1.3,0.6,0.9,-0.3847139877813617]
 
 before_shipping = [1.72,-1.7,-0.9230358322434521,-0.3847139877813617]
 
@@ -139,8 +140,8 @@ class OdomSubscriber(Node):
         global is_odom_initialized
         position = msg2.pose.pose.position
         orientation = msg2.pose.pose.orientation
-        (initial_positions[0], initial_positions[1], posz) = (position.x, position.y, position.z)
-        (qx, qy, initial_positions[2], initial_positions[3]) = (orientation.x, orientation.y, orientation.z, orientation.w)
+        # (initial_positions[0], initial_positions[1], posz) = (position.x, position.y, position.z)
+        # (qx, qy, initial_positions[2], initial_positions[3]) = (orientation.x, orientation.y, orientation.z, orientation.w)
         is_odom_initialized = True
 
 
@@ -306,7 +307,10 @@ class ServiceClient(Node):
             self.get_logger().info("response from service server: Success!")
             msgs_empty = String()
             self.publisher_lift.publish(msgs_empty)
-            nstate = TheState.ToBeforeShipping
+            if nstate == TheState.AttachShelf:
+                nstate = TheState.ToBeforeShipping
+            elif nstate == TheState.ToShippingReverse:
+                nstate = TheState.BackToBeforeShipping
         else:
             self.get_logger().info("response from service server: Failed!")
             nstate = TheState.EndProgramFailure
@@ -314,7 +318,15 @@ class ServiceClient(Node):
         self.get_logger().info("The response is None")
         nstate = TheState.EndProgramFailure
 
-
+def setNavigationGoal(dest, navigator):
+    pose = PoseStamped()
+    pose.header.frame_id = 'map'
+    pose.header.stamp = navigator.get_clock().now().to_msg()
+    pose.pose.position.x = dest[0]
+    pose.pose.position.y = dest[1]
+    pose.pose.orientation.z = dest[2]
+    pose.pose.orientation.w = dest[3]
+    return pose
 
 def wait_navigation(navigator):
     global nstate
@@ -349,14 +361,28 @@ def main():
     rclpy.init()
     robot_radius_large = 0.4
     robot_radius_initial = 0.15
-    cart_form_factor = 2
+    cart_form_factor = 1.2
     tolerance = 0.5
     inflation_radius = 0.25
 
+    # odom_subscriber = OdomSubscriber()
+    # while not is_odom_initialized:
+    #     rclpy.spin_once(odom_subscriber)
+    #     print('waiting odom data..')
+    #     time.sleep(0.1)
+    # odom_subscriber.destroy_node()
+    # print('initial positions reset to ',initial_positions)
+
+    localize_node = LocalizeNode()
+    while not is_localized:
+        rclpy.spin_once(localize_node)
+        print('localizing..')
+        time.sleep(0.05)
+    localize_node.destroy_node()
 
     navigator = BasicNavigator()    
-    initial_pose = setNavigationGoal(initial_positions, navigator)
-    navigator.setInitialPose(initial_pose)
+    #initial_pose = setNavigationGoal(initial_positions, navigator)
+    #navigator.setInitialPose(initial_pose)
 
     # Wait for navigation to activate fully
     navigator.waitUntilNav2Active()
@@ -474,6 +500,13 @@ def main():
             is_to_shipping_reverse_success = nstate_change_to_navigation_result(navigator.getResult(),
                  TheState.BackToBeforeShipping, TheState.EndProgramFailure)
             robot_radius /= 2
+            
+        service_client_node2 = ServiceClient()    
+        while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
+            rclpy.spin_once(service_client_node2)
+            print('at main '+nstate.name)           
+            if nstate == TheState.BackToBeforeShipping:
+                break
 
     else:
         print('some state logic failure at '+nstate.name)
