@@ -13,6 +13,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(custom_interfaces REQUIRED)
 
@@ -30,11 +31,11 @@ endif()
 
 add_executable(approach_service_server_node src/approach_service_server.cpp)
 ament_target_dependencies(approach_service_server_node
-rclcpp sensor_msgs geometry_msgs nav_msgs std_msgs custom_interfaces tf2 tf2_ros)
+rclcpp sensor_msgs geometry_msgs nav_msgs std_msgs std_srvs custom_interfaces tf2 tf2_ros)
 
 add_executable(approach_service_server_realrobot_node src/approach_service_server_realrobot.cpp)
 ament_target_dependencies(approach_service_server_realrobot_node
-rclcpp sensor_msgs geometry_msgs nav_msgs std_msgs custom_interfaces tf2 tf2_ros)
+rclcpp sensor_msgs geometry_msgs nav_msgs std_msgs std_srvs custom_interfaces tf2 tf2_ros)
 
 
 install(TARGETS

@@ -7,6 +7,7 @@ import shutil
 from enum import Enum
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
+from std_srvs.srv import Empty
 from custom_interfaces.srv import GoToLoading
 from rcl_interfaces.srv import SetParameters
 from rcl_interfaces.msg import Parameter,ParameterValue,ParameterType
@@ -14,7 +15,11 @@ from rclpy.duration import Duration
 from rclpy.task import Future
 from rclpy.node import Node
 import rclpy
+
+from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Twist
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+from rclpy.qos import ReliabilityPolicy, QoSProfile
 
 class TheState(Enum):
     ToPreload = 0
@@ -33,7 +38,9 @@ nstate = TheState.ToPreload
 is_localmap_param_set = False
 is_globalmap_param_set = False
 is_lifting_done = False
-
+is_rotating_done = False
+realrobot_move_topic = '/cmd_vel'
+simrobot_move_topic = '/diffbot_base_controller/cmd_vel_unstamped'
 
 initial_positions = [-0.0043595783091967205,float(-8.493102018902478e-06),
          0.0020702609325826864,0.9999978570075393]
@@ -54,6 +61,60 @@ before_shipping = [2.3922234933879425, 0.004731793330113001 ,
 
 before_shipping_reverse = [2.3922234933879425, 0.004731793330113001 , 
     -0.6612467802941838, 0.7501684447846199]              
+
+
+class OdomSubscriber(Node):
+
+    def __init__(self, target_yaw_rad):
+        global is_odom_rotated
+        is_odom_rotated = False
+        self.target_yaw_rad_ = target_yaw_rad
+        super().__init__('minimal_subscriber')
+        self.subscriber_odom = self.create_subscription(
+                Odometry,
+                '/odom',
+                self.odom_callback,
+                QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
+        self.publisher_rotate = self.create_publisher(
+            msg_type=Twist,
+            topic=simrobot_move_topic,qos_profile=1)
+
+    def check_reached_goal_desire_angle(self, delta_error = 0.08): 
+        delta_theta =  abs(self.radian_difference(self.target_yaw_rad_, self.current_yaw_rad_))
+        return delta_theta < delta_error   
+  
+    
+    def rotate_at_the_end(self,):
+        global is_odom_rotated
+        self.get_logger().info( "rotate_at_the_end() target %f, current %f " %(self.target_yaw_rad_, self.current_yaw_rad_))
+        ling = Twist()
+        while not self.check_reached_goal_desire_angle():
+            angular_z_raw = lambda first, second : first - second if abs(first - second) <= 3.14 else (first - second) - 2 * 3.14 
+            ling.linear.x = 0.0
+            ling.angular.z =  angular_z_raw if angular_z_raw < 1.5 else 0.5 * angular_z_raw
+            self.publisher_rotate.publish(ling)   
+            self.get_logger().info(
+                "Rotating current pos=['%f','%f'] target rad "
+                "'%f',current rad %f, angular speed %f" %(
+                self.current_pos_.x, self.current_pos_.y, self.target_yaw_rad_, self.current_yaw_rad_,
+                ling.angular.z))
+            time.sleep(0.1)        
+        ling.linear.x = 0.0
+        ling.angular.z =0.0
+        self.publisher_rotate.publish(ling)
+        is_odom_rotated = True  
+
+    def odom_callback(self, msg2):
+        global initial_positions 
+        global is_odom_initialized
+        self.current_pos_  = msg2.pose.pose.position
+        self.current_angle_ = msg2.pose.pose.orientation
+        # (self.current_yaw_roll_,self.current_yaw_pitch_,self.current_yaw_rad_) = \
+        #     euler_from_quaternion ([
+        # msg2.pose.pose.orientation.x, msg2.pose.pose.orientation.y,
+        # msg2.pose.pose.orientation.z, msg2.pose.pose.orientation.w])
+
+
 
 
 class SetParameterClient(Node):
@@ -178,6 +239,36 @@ class LiftUpDown(Node):
         self.publisher_liftdown.publish(msgs_empty)
     is_lifting_done = True
     self.timer.cancel()
+
+class Rotation180(Node):
+  def __init__(self):
+    super().__init__('lift_up_down_node')
+
+    self.service_client = self.create_client(
+            srv_type=Empty,
+            srv_name="/rotate180")
+
+    timer_period: float = 0.01
+    self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
+
+  def timer_callback(self): 
+    global is_rotating_done
+    is_rotating_done = False
+    while not self.service_client.wait_for_service(timeout_sec=1.0):
+        self.get_logger().info(f'service {self.service_client.srv_name} not available, waiting...') 
+    self.get_logger().info('timer_callback Rotate180 service') 
+    request = Empty.Request()
+    self.future = self.service_client.call_async(request)
+    self.future.add_done_callback(self.response_callback)
+    self.timer.cancel()
+
+  def response_callback(self, future: Future):
+    global is_rotating_done
+    response = future.result()
+    if response is not None:
+        self.get_logger().info("Some Response happened: Success!")
+        is_rotating_done = True
+    print('response from Rotate180 service')
 
 class ServiceClient(Node):
   def __init__(self):
@@ -368,43 +459,48 @@ def main():
         robot_radius= robot_radius_initial
         is_localmap_param_set = False
         is_globalmap_param_set = False
-        while not is_to_shipping_reverse_success:
-            inflation_radius = 0.1 # Good value
-            #tolerance = robot_radius# Happened to be the same.
-            robot_footprint_matrix = [[robot_radius,robot_radius],
-                                      [robot_radius,-1*robot_radius],
-                                      [-robot_radius,robot_radius],
-                                      [-robot_radius,-1*robot_radius]]
-            robot_footprint_string = '['+','.join(
-                    str_sublist for str_sublist 
-                        in [''.join(str(ele)) 
-                            for ele in robot_footprint_matrix ])+']'
-            set_param_node = SetParameterClient(robot_radius,tolerance,robot_footprint_string,inflation_radius)
-            while (not is_localmap_param_set) or (not is_globalmap_param_set):
-                rclpy.spin_once(set_param_node)
-                print('setting params')
-                time.sleep(0.05)
-            set_param_node.destroy_node()
-            navigator.waitUntilNav2Active()
-            shipping_pose = setNavigationGoal(shipping_destinations_reverse, navigator)
-            navigator.goToPose(shipping_pose)
-            wait_navigation(navigator)
-            is_to_shipping_reverse_success = nstate_change_to_navigation_result(navigator.getResult(),
-                 TheState.BackToBeforeShipping, TheState.EndProgramFailure)
-            robot_radius /= 2
-
         lift_down_node = LiftUpDown(False)
         while (not is_lifting_done):
                 rclpy.spin_once(lift_down_node)
                 print('lifting')
                 time.sleep(0.05)
-                
+        # while not is_to_shipping_reverse_success:
+        #     inflation_radius = 0.1 # Good value
+        #     #tolerance = robot_radius# Happened to be the same.
+        #     robot_footprint_matrix = [[robot_radius,robot_radius],
+        #                               [robot_radius,-1*robot_radius],
+        #                               [-robot_radius,robot_radius],
+        #                               [-robot_radius,-1*robot_radius]]
+        #     robot_footprint_string = '['+','.join(
+        #             str_sublist for str_sublist 
+        #                 in [''.join(str(ele)) 
+        #                     for ele in robot_footprint_matrix ])+']'
+        #     set_param_node = SetParameterClient(robot_radius,tolerance,robot_footprint_string,inflation_radius)
+        #     while (not is_localmap_param_set) or (not is_globalmap_param_set):
+        #         rclpy.spin_once(set_param_node)
+        #         print('setting params')
+        #         time.sleep(0.05)
+        #     set_param_node.destroy_node()
+        #     navigator.waitUntilNav2Active()
+        #     shipping_pose = setNavigationGoal(shipping_destinations_reverse, navigator)
+        #     navigator.goToPose(shipping_pose)
+        #     wait_navigation(navigator)
+        #     is_to_shipping_reverse_success = nstate_change_to_navigation_result(navigator.getResult(),
+        #          TheState.BackToBeforeShipping, TheState.EndProgramFailure)
+        #     robot_radius /= 2
+        rotate_node = Rotation180()
+        while not is_rotating_done:
+            rclpy.spin_once(rotate_node)
+            print('localizing..')
+            time.sleep(0.05)
+        rotate_node.destroy_node()
         service_client_node2 = ServiceClient()    
         while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
             rclpy.spin_once(service_client_node2)
             print('at main '+nstate.name)           
             if nstate == TheState.BackToBeforeShipping:
                 break
+        nstate = TheState.BackToBeforeShipping
     else:
         print('some state logic failure at '+nstate.name)
         return
