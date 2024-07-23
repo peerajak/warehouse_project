@@ -419,7 +419,7 @@ private:
        RCLCPP_INFO(this->get_logger(),"laser() service_activated");
       if (!tf_published) {
      RCLCPP_INFO(this->get_logger(),"Publishing TF");
-        int smallest_allowable_group = 5;
+        int smallest_allowable_group = 4;
         std::vector<group_of_laser> aggregation_of_groups_of_lasers;
         std::shared_ptr<group_of_laser> gl(new group_of_laser(laser_intensity_threshold));
 

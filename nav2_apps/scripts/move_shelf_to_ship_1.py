@@ -1,72 +1,42 @@
 #! /usr/bin/env python3
-# Copyright 2021 Samsung Research America
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Simulation robot
 
 import time
 from copy import deepcopy
 import shutil
-from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
 from custom_interfaces.srv import GoToLoading
-from nav2_msgs.srv import ManageLifecycleNodes
+from rcl_interfaces.srv import SetParameters
+from rcl_interfaces.msg import Parameter,ParameterValue,ParameterType
 from rclpy.duration import Duration
 from rclpy.task import Future
 from rclpy.node import Node
 import rclpy
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
-from rclpy.qos import ReliabilityPolicy, QoSProfile
 
-nstates = ['ToPreload', 'AttachShelf', 'ToShipping','EndProgramSuccess', 'EndProgramFailure']
+nstates = ['ToPreload', 'AttachShelf', 'ToShipping', 'Rotating','EndProgramSuccess', 'EndProgramFailure']
 nstate = nstates[0]
 
-is_odom_initialized = False
-
+initial_positions = { "initial_position" :[ -0.30038124210802383516,0.2,0.0,2.8 ]}
 # Shelf positions for picking
 shelf_positions = {
-    "shelf_1": [5.729634686956881, 0.07032379500580269,-0.6874334536853087,0.726247372975826]}
-
+    "shelf_1": [5.779634686956881, 0.07032379500580269,-0.6874334536853087,0.726247372975826]}
 # Shipping destination for picked products
 shipping_destinations = {
-    "shipping": [2.5069296916199484, 1.3907159489075767,0.756143318789467,0.6544060524246781],
+    "shipping": [2.5527113663089837, 1.4654144578316795,0.781185191773144,0.6242993642110779],
 }
-initial_positions = [ 0,0,0,0 ]
-
-class OdomSubscriber(Node):
-
-    def __init__(self):
-        super().__init__('minimal_subscriber')
-        self.subscriber_odom = self.create_subscription(
-                Odometry,
-                '/odom',
-                self.odom_callback,
-                QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
-
-
-    def odom_callback(self, msg2):
-        global initial_positions 
-        global is_odom_initialized
-        position = msg2.pose.pose.position
-        orientation = msg2.pose.pose.orientation
-        (initial_positions[0], initial_positions[1], posz) = (position.x, position.y, position.z)
-        (qx, qy, initial_positions[2], initial_positions[3]) = (orientation.x, orientation.y, orientation.z, orientation.w)
-        is_odom_initialized = True
-
-
-
-
-
+before_shipping = [2.3922234933879425, 0.004731793330113001 , 0.6911793760300523, 0.7226832433028371]
+security_route_return_journey = [
+        [5.557730437379715,  -1.1],
+        [5.557730437379715,  -0.9],
+        [5.418704325414067,  -0.42355001963092703],
+        [4.092043659920394, -0.19048850942125184],
+        #[3.92317535720752,   -0.01],
+        #[5.557730437379715,  -0.3],
+        #[5.557730437379715,  -0.21633228096287413],
+        [2.5069296916199484, 1.4654144578316795]
+        ]
 '''
 Basic item picking demo. In this demonstration, the expectation
 is that a person is waiting at the item shelf to put the item on the robot
@@ -81,31 +51,48 @@ class ServiceClient(Node):
     self.request_item_location = request_item_location
     self.request_destination = request_destination
     my_callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
-
-
     self.service_client = self.create_client(
             srv_type=GoToLoading,
             srv_name="/approach_shelf",
             callback_group=my_callback_group)
     self.service_client2 = self.create_client(
-            srv_type=ManageLifecycleNodes,
-            srv_name="/lifecycle_manager_pathplanner/manage_nodes",
+            srv_type=SetParameters,
+            srv_name="/global_costmap/global_costmap/set_parameters",
             callback_group=my_callback_group)
     self.service_client3 = self.create_client(
-            srv_type=ManageLifecycleNodes,
-            srv_name="/lifecycle_manager_pathplanner/manage_nodes",
+            srv_type=SetParameters,
+            srv_name="/local_costmap/local_costmap/set_parameters",
+            callback_group=my_callback_group)
+    self.service_client4 = self.create_client(
+            srv_type=SetParameters,
+            srv_name="/global_costmap/global_costmap/set_parameters",
+            callback_group=my_callback_group)
+    self.service_client5 = self.create_client(
+            srv_type=SetParameters,
+            srv_name="/local_costmap/local_costmap/set_parameters",
             callback_group=my_callback_group)
 
     self.future: Future = None
     self.future2: Future = None
     self.future3: Future = None
+    self.future4: Future = None
+    self.future5: Future = None
     self.final_approach = True
+
+    self.robot_radius = 0.15
+    self.robot_footprint = '[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]'
+    self.robot_with_cart_radius = 0.28
+    self.robot_with_cart_footprint = '[ [0.5, 0.28], [0.5, -0.28], [-0.5, -0.28], [-0.5, 0.28] ]'
 
     timer_period: float = 1.0
     self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
-    self.publisher_lift = self.create_subscription(
+    self.publisher_lift = self.create_publisher(
             msg_type=String,
             topic='/elevator_up',
+            qos_profile=1)
+    self.publisher_liftdown = self.create_publisher(
+            msg_type=String,
+            topic='/elevator_down',
             qos_profile=1)
 
   def timer_callback(self): 
@@ -119,30 +106,66 @@ class ServiceClient(Node):
     self.timer.cancel()
 
   def timer2_callback(self):  
-    self.get_logger().info('timer_callback lifecycle_service_client')
+    self.get_logger().info('timer2_callback lifecycle_service_client')
     while not self.service_client2.wait_for_service(timeout_sec=1.0):
         self.get_logger().info(f'service {self.service_client2.srv_name} not available, waiting...')
-    request = ManageLifecycleNodes.Request()
-    request.command = 1 # Pause the lifecycle manager for pathplanner
+    request = SetParameters.Request()
+    request.parameters = [Parameter(name= 'robot_radius',  
+            value=ParameterValue(
+                    type=ParameterType.PARAMETER_DOUBLE, 
+                    double_value= self.robot_with_cart_radius))  ]#0.7071068
     self.future2 = self.service_client2.call_async(request)
     self.future2.add_done_callback(self.response2_callback)
     self.timer2.cancel()
 
   def timer3_callback(self):  
-    self.get_logger().info('timer_callback lifecycle_service_client')
+    self.get_logger().info('timer3_callback lifecycle_service_client')
     while not self.service_client3.wait_for_service(timeout_sec=1.0):
         self.get_logger().info(f'service {self.service_client3.srv_name} not available, waiting...')
-    request = ManageLifecycleNodes.Request()
-    request.command = 2 # Resume the lifecycle manager for pathplanner
+    request = SetParameters.Request()
+    request.parameters = [Parameter(name= 'footprint',  
+            value=ParameterValue(
+                    type=ParameterType.PARAMETER_STRING, 
+                    string_value= self.robot_with_cart_footprint))]
     self.future3 = self.service_client3.call_async(request)
     self.future3.add_done_callback(self.response3_callback)
     self.timer3.cancel()
+
+  def timer4_callback(self):  
+    self.get_logger().info('timer4_callback lifecycle_service_client')
+    while not self.service_client4.wait_for_service(timeout_sec=1.0):
+        self.get_logger().info(f'service {self.service_client4.srv_name} not available, waiting...')
+    request = SetParameters.Request()
+    request.parameters = [Parameter(name= 'robot_radius',  
+            value=ParameterValue(
+                    type=ParameterType.PARAMETER_DOUBLE, 
+                    double_value= self.robot_radius)), Parameter(name= 'inflation_radius',  
+            value=ParameterValue(
+                    type=ParameterType.PARAMETER_DOUBLE, 
+                    double_value= 0.1)) ]
+    self.future4 = self.service_client4.call_async(request)
+    self.future4.add_done_callback(self.response4_callback)
+    self.timer4.cancel()
+
+  def timer5_callback(self):  
+    self.get_logger().info('timer5_callback lifecycle_service_client')
+    while not self.service_client5.wait_for_service(timeout_sec=1.0):
+        self.get_logger().info(f'service {self.service_client5.srv_name} not available, waiting...')
+    request = SetParameters.Request()
+    request.parameters = [Parameter(name= 'footprint',  
+            value=ParameterValue(
+                    type=ParameterType.PARAMETER_STRING, 
+                    string_value= self.robot_footprint))]
+    self.future5 = self.service_client3.call_async(request)
+    self.future5.add_done_callback(self.response5_callback)
+    self.timer5.cancel()
+
 
   def response_callback(self, future: Future):
     global nstate
     response = future.result()
     if response is not None:
-        #self.get_logger().info("Some Response happened")
+        self.get_logger().info("Some Response happened")
         if(response.complete):
             self.get_logger().info("response from service server: Success!")
             msgs_empty = String()
@@ -152,7 +175,7 @@ class ServiceClient(Node):
             self.timer2 = self.create_timer(timer_period_sec=timer_period,callback=self.timer2_callback)
         else:
             self.get_logger().info("response from service server: Failed!")
-            nstate = nstates[4]
+            nstate = nstates[5]
 
     else:
         self.get_logger().info("The response is None")
@@ -161,65 +184,169 @@ class ServiceClient(Node):
     global nstate
     response = future.result()
     if response is not None:
-        #self.get_logger().info("Some Response happened")
-        if(response.success):
-            self.get_logger().info("response from lifecycle service server: Success!")
-            msgs_empty = String()
-            self.publisher_lift.publish(msgs_empty)
+        self.get_logger().info("Some Response2 happened")
+        if(response.results[0].successful):
+            self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
             nstate = nstates[2]
-            source = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller_robot_with_cart_sim.yaml"
-            destination = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller.yaml"
-            dest = shutil.copyfile(source, destination)
-            self.get_logger().info("copy from: "+source+" to "+dest)
-            source2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server_robot_with_cart_sim.yaml"
-            destination2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server.yaml"
-            dest2 = shutil.copyfile(source2, destination2)
-            self.get_logger().info("copy from: "+source2+" to "+dest2)
             timer_period: float = 1.0
             self.timer3 = self.create_timer(timer_period_sec=timer_period,callback=self.timer3_callback)
         else:
             self.get_logger().info("response from lifecycle service server: Failed!")
-            nstate = nstates[4]
+            nstate = nstates[5]
     else:
         self.get_logger().info("The response is None")
+
+  def response4_callback(self, future: Future):
+    global nstate
+    response = future.result()
+    if response is not None:
+        self.get_logger().info("Some Response4 happened")
+        if(response.results[0].successful):
+            self.get_logger().info("response4 from lifecycle service server: Success!"+response.results[0].reason)
+            self.is_parameter4_complete = True
+        else:
+            self.get_logger().info("response4 from lifecycle service server: Failed!")
+            self.is_parameter4_complete = True
+            nstate = nstates[5]
+    else:
+        self.get_logger().info("The response is None")
+        self.is_parameter4_complete = True
 
   def response3_callback(self, future: Future):
     global nstate
     response = future.result()
     if response is not None:
-        #self.get_logger().info("Some Response happened")
-        if(response.success):
-            self.get_logger().info("response from lifecycle service server: Success!")
-            msgs_empty = String()
-            self.publisher_lift.publish(msgs_empty)
-            #Make sure to swap back the original file
-            #source = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller_robot_alone_sim.yaml"
-            #destination = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/controller.yaml"
-            #dest = shutil.copyfile(source, destination)
-            #self.get_logger().info("copy from: "+source+" to "+dest)
-            #source2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server_robot_alone_sim.yaml"
-            #destination2 = "/home/user/ros2_ws/src/warehouse_project/path_planner_server/config/planner_server.yaml"
-            #dest2 = shutil.copyfile(source2, destination2)
-            #self.get_logger().info("copy from: "+source2+" to "+dest2)
-            nstate = nstates[3]
+        self.get_logger().info("Some Response3 happened")
+        if(response.results[0].successful):
+            self.get_logger().info("response from lifecycle service server: Success!"+response.results[0].reason)
             self.navigator.waitUntilNav2Active()
             print('Got product from ' + self.request_item_location +
-                '! Bringing product to shipping destination (' + self.request_destination + ')...')
-            shipping_destination = PoseStamped()
-            shipping_destination.header.frame_id = 'map'
-            shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
-            shipping_destination.pose.position.x = shipping_destinations[self.request_destination][0]
-            shipping_destination.pose.position.y = shipping_destinations[self.request_destination][1]
-            shipping_destination.pose.orientation.z = shipping_destinations[self.request_destination][2]
-            shipping_destination.pose.orientation.w = shipping_destinations[self.request_destination][3]
-            self.navigator.goToPose(shipping_destination)
-        else:
-            self.get_logger().info("response from lifecycle service server: Failed!")
-            nstate = nstates[4]            
+                '! Bringing product to just before shipping destination (' + self.request_destination + ')...')
+            just_before_shipping = PoseStamped()
+            just_before_shipping.header.frame_id = 'map'
+            just_before_shipping.header.stamp = self.navigator.get_clock().now().to_msg()
+            just_before_shipping.pose.position.x = before_shipping[0]
+            just_before_shipping.pose.position.y = before_shipping[1]
+            just_before_shipping.pose.orientation.z = before_shipping[2]
+            just_before_shipping.pose.orientation.w = before_shipping[3]
+            self.navigator.goToPose(just_before_shipping)
+            while not self.navigator.isTaskComplete():
+                    pass
+            result = self.navigator.getResult()
+            if result == TaskResult.SUCCEEDED:
+                print('just before complete! Goto shipping destination')
+                shipping_destination = PoseStamped()
+                shipping_destination.header.frame_id = 'map'
+                shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
+                shipping_destination.pose.position.x = shipping_destinations[self.request_destination][0]
+                shipping_destination.pose.position.y = shipping_destinations[self.request_destination][1]
+                shipping_destination.pose.orientation.z = shipping_destinations[self.request_destination][2]
+                shipping_destination.pose.orientation.w = shipping_destinations[self.request_destination][3]
+                self.navigator.goToPose(shipping_destination)
+                while not self.navigator.isTaskComplete():
+                    pass
+                result1 = self.navigator.getResult()
+                if result1 == TaskResult.SUCCEEDED:
+                    print('Arrived shipping destination (' + self.request_destination + ')...')
+                    msgs_empty = String()
+                    self.publisher_liftdown.publish(msgs_empty)
+                    print('Unloaded complete! Goto initial position')
+                    timer_period: float = 1.0
+                    self.timer4 = self.create_timer(timer_period_sec=timer_period,callback=self.timer4_callback)
+                    self.timer5 = self.create_timer(timer_period_sec=timer_period,callback=self.timer5_callback)
+                    self.is_parameter4_complete = False
+                    self.is_parameter5_complete = False
+                    while (not self.is_parameter4_complete) or (not self.is_parameter5_complete):
+                        time.sleep(0.1) 
+                        print('Waiting or footprint and robot_radius reset')
+                    nstate = nstates[3]
+                    shipping_destination = PoseStamped()
+                    shipping_destination.header.frame_id = 'map'
+                    shipping_destination.header.stamp = self.navigator.get_clock().now().to_msg()
+                    shipping_destination.pose.position.x = shipping_destinations[self.request_destination][0]
+                    shipping_destination.pose.position.y = shipping_destinations[self.request_destination][1]
+                    shipping_destination.pose.orientation.z = -0.6612467802941838
+                    shipping_destination.pose.orientation.w = 0.7501684447846199
+                    self.navigator.goToPose(shipping_destination)
+                    while not self.navigator.isTaskComplete():
+                        pass
+                    result2 = self.navigator.getResult()
+                    if result2 == TaskResult.SUCCEEDED:
+                        print('Task at rotate back shipping Success!')
+                    self.navigator.waitUntilNav2Active()
+                    print('Going back to just before shipping_position')
+                    just_before_shipping = PoseStamped()
+                    just_before_shipping.header.frame_id = 'map'
+                    just_before_shipping.header.stamp = self.navigator.get_clock().now().to_msg()
+                    just_before_shipping.pose.position.x = before_shipping[0]
+                    just_before_shipping.pose.position.y = before_shipping[1]
+                    just_before_shipping.pose.orientation.z = -0.6612467802941838
+                    just_before_shipping.pose.orientation.w = 0.7501684447846199
+                    self.navigator.goToPose(just_before_shipping)
+                    while not self.navigator.isTaskComplete():
+                            pass
+                    result3 = self.navigator.getResult()
+                    if result3 == TaskResult.SUCCEEDED:
+                        print('Going back to initial_position')
+                        initial_position = PoseStamped()
+                        initial_position.header.frame_id = 'map'
+                        initial_position.header.stamp = self.navigator.get_clock().now().to_msg()
+                        initial_position.pose.position.x = initial_positions["initial_position"][0]
+                        initial_position.pose.position.y = initial_positions["initial_position"][1]
+                        initial_position.pose.orientation.z = initial_positions["initial_position"][2]
+                        initial_position.pose.orientation.w = initial_positions["initial_position"][3]
+                        self.navigator.goToPose(initial_position)
+                        while not self.navigator.isTaskComplete():
+                            pass
+                        result4 = self.navigator.getResult()
+                        if result4 == TaskResult.SUCCEEDED:
+                            print('Successfully reached initial position. Exit Program')
+                            nstate = nstates[4] 
+                            exit(0)
+                        elif result4 == TaskResult.CANCELED:
+                            print('Security route was canceled, exiting.')
+                            exit(1)
+                        elif result4 == TaskResult.FAILED:
+                            print('Security route failed! Restarting from the other side...')
+                        else:
+                            self.get_logger().info("response from lifecycle service server: Failed!")
+                            nstate = nstates[5]  
+                    else:                                     
+                        print('Task at return just_before_shipping failed!')
+                        nstate = nstates[4]
+                        exit(-1)
+                elif result1 == TaskResult.CANCELED:
+                    print('Task at ' + self.request_item_location +
+                        ' was canceled. Returning to staging point...')
+                elif result1 == TaskResult.FAILED:
+                    print('Task at ' + self.request_item_location + ' failed!')
+                    exit(-1)
+                while not self.navigator.isTaskComplete():
+                    pass
+            elif result == TaskResult.CANCELED:
+                print('Security route was canceled, exiting.')
+                exit(1)
+            elif result == TaskResult.FAILED:
+                print('Security route failed! Restarting from the other side...')
+            else:
+                self.get_logger().info("response from lifecycle service server: Failed!")
+                nstate = nstates[5]           
     else:
         self.get_logger().info("The response is None")
-    print('leaving service node') 
-    rclpy.shutdown()
+    #print('leaving service node') 
+    #rclpy.shutdown()
+ 
+  def response5_callback(self, future: Future):
+    global nstate
+    response = future.result()
+    if response is not None:
+        self.get_logger().info("Some Response5 happened")
+        if(response.results[0].successful):
+            self.get_logger().info("response5 from lifecycle service server: Success!"+response.results[0].reason)  
+            self.is_parameter5_complete = True       
+    else:
+        self.get_logger().info("The response5 is None")
+        self.is_parameter5_complete = True
  
 
 
@@ -234,26 +361,19 @@ def main():
     request_destination = 'shipping'
     ####################
 
-    odom_subscriber = OdomSubscriber()
 
 
-    while not is_odom_initialized:
-        rclpy.spin_once(odom_subscriber)
-        print('waiting odom data..')
-        time.sleep(0.1)
-
-    odom_subscriber.destroy_node()
     navigator = BasicNavigator()
+
     # Set your demo's initial pose
     initial_pose = PoseStamped()
     initial_pose.header.frame_id = 'map'
     initial_pose.header.stamp = navigator.get_clock().now().to_msg()
-    initial_pose.pose.position.x =initial_positions[0]
-    initial_pose.pose.position.y = initial_positions[1]
-    initial_pose.pose.orientation.z = initial_positions[2]
-    initial_pose.pose.orientation.w = initial_positions[3]
+    initial_pose.pose.position.x = -0.0043595783091967205
+    initial_pose.pose.position.y = float(-8.493102018902478e-06)
+    initial_pose.pose.orientation.z = 0.0020702609325826864
+    initial_pose.pose.orientation.w = 0.9999978570075393
     navigator.setInitialPose(initial_pose)
-
 
     # Wait for navigation to activate fully
     navigator.waitUntilNav2Active()
@@ -309,7 +429,7 @@ def main():
         executor.spin_once()
         print(nstate)
     
-    # Wait for navigation to activate fully
+    
 
 
 
@@ -325,14 +445,6 @@ if __name__ == '__main__':
     main()
 
     exit(0)
-    # TODO add new lifecycle_service client
-    # - remove service_client_node
-    # - create lifecycle_service_client class
-    #    - pause lifecycle manager of path planner
-    #    - swap config files
-    #    - restart lifecycle manager of path planner with new config files
-    # - add lifecycle_service_client instance
-    ####
 
 
 

@@ -74,7 +74,7 @@ local_costmap:
       width: 3
       height: 3
       resolution: 0.05
-      footprint: "[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]"
+      footprint: "[ [0.05, 0.05], [0.05, -0.05], [-0.05, -0.05], [-0.05, 0.05] ]"
       plugins: ["voxel_layer", "inflation_layer"]
       filters: ["keepout_filter"]
       keepout_filter:
