@@ -314,11 +314,12 @@ private:
   rclcpp::CallbackGroup::SharedPtr callback_group_4_service;
   rclcpp::Service<GoToLoading>::SharedPtr srv_4_service;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_4_static_broadcaster_;
-  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr srv_6_service;
+
   //--------5. load/ unload related ----------//
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr publisher_5_load;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr publisher_5_unload;
-
+  //------ 6. Rotation -------------//
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr srv_6_service;
   //--------- Private Methods --------------------//
   //------- 1. timer_1 related Functions -----------//
   void timer1_callback() {
@@ -843,7 +844,7 @@ private:
 
     //_service_activated = false;
   }
-
+     //----6 Rotation------
     void rotate_service_callback(const std::shared_ptr<std_srvs::srv::Empty::Request> request,
                         const std::shared_ptr<std_srvs::srv::Empty::Response> response) {
     RCLCPP_INFO(this->get_logger(), "Rotate Service Callback");    

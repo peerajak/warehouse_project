@@ -491,7 +491,7 @@ def main():
         rotate_node = Rotation180()
         while not is_rotating_done:
             rclpy.spin_once(rotate_node)
-            print('localizing..')
+            print('Rotating..')
             time.sleep(0.05)
         rotate_node.destroy_node()
         service_client_node2 = ServiceClient()    

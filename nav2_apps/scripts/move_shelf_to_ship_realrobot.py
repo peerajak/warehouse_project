@@ -20,7 +20,7 @@ import rclpy
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from nav_msgs.msg import Odometry
 from rclpy.qos import ReliabilityPolicy, QoSProfile
-from tf2.transformations import euler_from_quaternion, quaternion_from_euler
+
 
 class TheState(Enum):
     ToPreload = 0
@@ -39,6 +39,7 @@ nstate = TheState.ToPreload
 is_localmap_param_set = False
 is_globalmap_param_set = False
 is_lifting_done = False
+is_rotating_done = False
 is_localized = False
 is_odom_rotated = False
 localize_threshold = [0.03 ,0.03,0.03]
@@ -301,8 +302,39 @@ class LiftUpDown(Node):
     is_lifting_done = True
     self.timer.cancel()
 
+class Rotation180(Node):
+  def __init__(self):
+    super().__init__('lift_up_down_node')
+
+    self.service_client = self.create_client(
+            srv_type=Empty,
+            srv_name="/rotate180")
+
+    timer_period: float = 0.01
+    self.timer = self.create_timer(timer_period_sec=timer_period,callback=self.timer_callback)
+
+  def timer_callback(self): 
+    global is_rotating_done
+    is_rotating_done = False
+    while not self.service_client.wait_for_service(timeout_sec=1.0):
+        self.get_logger().info(f'service {self.service_client.srv_name} not available, waiting...') 
+    self.get_logger().info('timer_callback Rotate180 service') 
+    request = Empty.Request()
+    self.future = self.service_client.call_async(request)
+    self.future.add_done_callback(self.response_callback)
+    self.timer.cancel()
+
+  def response_callback(self, future: Future):
+    global is_rotating_done
+    response = future.result()
+    if response is not None:
+        self.get_logger().info("Some Response happened: Success!")
+        is_rotating_done = True
+    print('response from Rotate180 service')
+
+
 class ServiceClient(Node):
-  def __init__(self, final_approach):
+  def __init__(self):
     super().__init__('service_client')
     self.get_logger().info('init service_client')
     my_callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
@@ -419,7 +451,7 @@ def main():
         TheState.AttachShelf, TheState.EndProgramFailure)
 
     # attachShelf state
-    service_client_node = ServiceClient(True)    
+    service_client_node = ServiceClient()    
     while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
         rclpy.spin_once(service_client_node )
         print('at main '+nstate.name)
@@ -488,11 +520,7 @@ def main():
             is_to_shipping_success = nstate_change_to_navigation_result(navigator.getResult(),
                  TheState.ToShippingReverse, TheState.EndProgramFailure)
             robot_radius /= 2
-        lift_down_node = LiftUpDown(False)
-        while (not is_lifting_done):
-                rclpy.spin_once(lift_down_node)
-                print('lifting')
-                time.sleep(0.05)
+
     else:
         print('some state logic failure at '+nstate.name)
         return
@@ -502,6 +530,11 @@ def main():
         robot_radius= robot_radius_initial
         is_localmap_param_set = False
         is_globalmap_param_set = False
+        lift_down_node = LiftUpDown(False)
+        while (not is_lifting_done):
+                rclpy.spin_once(lift_down_node)
+                print('lifting')
+                time.sleep(0.05)
         # while not is_to_shipping_reverse_success:
         #     inflation_radius = 0.1 # Good value
         #     #tolerance = robot_radius# Happened to be the same.
@@ -526,21 +559,26 @@ def main():
         #     is_to_shipping_reverse_success = nstate_change_to_navigation_result(navigator.getResult(),
         #          TheState.BackToBeforeShipping, TheState.EndProgramFailure)
         #     robot_radius /= 2
-
-        odom_subscriber = OdomSubscriber(3.14)
-        while not is_odom_rotated:
-            rclpy.spin_once(odom_subscriber)
-            print('waiting odom data..')
-            time.sleep(0.1)
-        odom_subscriber.destroy_node()
-   
-        # service_client_node2 = ServiceClient(False)    
+  
+        # service_client_node2 = ServiceClient()    
         # while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
         #     rclpy.spin_once(service_client_node2)
         #     print('at main '+nstate.name)           
         #     if nstate == TheState.BackToBeforeShipping:
         #         break
-
+        rotate_node = Rotation180()
+        while not is_rotating_done:
+            rclpy.spin_once(rotate_node)
+            print('Rotate..')
+            time.sleep(0.05)
+        rotate_node.destroy_node()
+        service_client_node2 = ServiceClient()    
+        while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
+            rclpy.spin_once(service_client_node2)
+            print('at main '+nstate.name)           
+            if nstate == TheState.BackToBeforeShipping:
+                break
+        nstate = TheState.BackToBeforeShipping
     else:
         print('some state logic failure at '+nstate.name)
         return

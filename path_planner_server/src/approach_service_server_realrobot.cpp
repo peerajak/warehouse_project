@@ -16,6 +16,7 @@
 #include <memory>
 #include <nav_msgs/msg/odometry.hpp>
 #include <std_msgs/msg/empty.hpp>
+#include <std_srvs/srv/empty.hpp>
 
 using namespace std::chrono_literals;
 
@@ -235,7 +236,11 @@ public:
     publisher_5_unload =
         this->create_publisher<std_msgs::msg::Empty>("elevator_down", 10);
 
-
+   //------- 6. Rotate service ---------//
+    srv_6_service = create_service<std_srvs::srv::Empty>(
+        "rotate180",
+        std::bind(&MidLegsTFService::rotate_service_callback, this, _1, _2),
+        qos_profile.get_rmw_qos_profile(), callback_group_4_service);
   }
 
 private:
@@ -311,6 +316,9 @@ private:
   //--------5. load/ unload related ----------//
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr publisher_5_load;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr publisher_5_unload;
+
+  //------ 6. Rotation -------------//
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr srv_6_service;
 
   //--------- Private Methods --------------------//
   //------- 1. timer_1 related Functions -----------//
@@ -828,9 +836,14 @@ private:
      nstate = service_deactivated;
 
     }
-   
-
     //_service_activated = false;
+  }
+
+     //----6 Rotation------
+  void rotate_service_callback(const std::shared_ptr<std_srvs::srv::Empty::Request> request,
+                        const std::shared_ptr<std_srvs::srv::Empty::Response> response) {
+    RCLCPP_INFO(this->get_logger(), "Rotate Service Callback");    
+    rotate_at_the_end(current_yaw_rad_+pi); 
   }
 };
 
