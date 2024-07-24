@@ -494,12 +494,12 @@ def main():
             print('Rotating..')
             time.sleep(0.05)
         rotate_node.destroy_node()
-        service_client_node2 = ServiceClient()    
-        while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
-            rclpy.spin_once(service_client_node2)
-            print('at main '+nstate.name)           
-            if nstate == TheState.BackToBeforeShipping:
-                break
+        # service_client_node2 = ServiceClient()    
+        # while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
+        #     rclpy.spin_once(service_client_node2)
+        #     print('at main '+nstate.name)           
+        #     if nstate == TheState.BackToBeforeShipping:
+        #         break
         nstate = TheState.BackToBeforeShipping
     else:
         print('some state logic failure at '+nstate.name)
