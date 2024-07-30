@@ -50,7 +50,7 @@ simrobot_move_topic = '/diffbot_base_controller/cmd_vel_unstamped'
 
 initial_positions = [-0.9,-0.3,0.1,0.999]
 
-shelf_positions = [ 3.7, -1.9,0.7938911945621069,-0.6080598417892362]
+shelf_positions = [3.5, -1.7,0.7638911945621069,-0.6080598417892362]
 
 shipping_destinations = [1.3,0.5,-0.4,-0.3847139877813617]
 
@@ -186,7 +186,7 @@ class SetParameterClient(Node):
     global is_globalmap_param_set
     is_localmap_param_set = False
     is_globalmap_param_set = False
-    self.get_logger().info('SetParameterClient robot_radius %f, tolerance %f, inflation_radius %f, footprint '%(robot_radius,tolerance,inflation_radius)+footprint)
+    self.get_logger().info('SetParameterClient robot_radius %f, tolerance %f, goal_tolerance %f, inflation_radius %f, footprint '%(robot_radius,tolerance,xy_goal_tolerance,inflation_radius)+footprint)
     my_callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
     self.service_client2 = self.create_client(
             srv_type=SetParameters,
@@ -531,63 +531,65 @@ def main():
             robot_radius *= 0.2
             #tolerance *= 0.5
             xy_goal_tolerance *=8
+            if robot_radius <= 0.03:
+                nstate = TheState.ToShippingReverse
+                break
     else:
-        print('some state logic failure at '+nstate.name)
-        return
+        print('some state logic failure at '+nstate.name+'Retry')
+        nstate == TheState.ToBeforeShipping
+
    
     if(nstate == TheState.ToShippingReverse):
         is_to_shipping_reverse_success = False
-        robot_radius= robot_radius_initial
+        must_rotate_by_service = True
+        robot_radius= robot_radius_large
+        xy_goal_tolerance =  xy_goal_tolerance_initial
         is_localmap_param_set = False
         is_globalmap_param_set = False
         lift_down_node = LiftUpDown(False)
-        while (not is_lifting_done):
-                rclpy.spin_once(lift_down_node)
-                print('lifting')
+        
+        if must_rotate_by_service:
+            service_client_node2 = ServiceClient()    
+            while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
+                rclpy.spin_once(service_client_node2)
+                print('at main '+nstate.name)           
+                if nstate == TheState.BackToBeforeShipping:
+                    break
+            rotate_node = Rotation180()
+            while not is_rotating_done:
+                rclpy.spin_once(rotate_node)
+                print('Rotate..')
                 time.sleep(0.05)
-        # while not is_to_shipping_reverse_success:
-        #     inflation_radius = 0.1 # Good value
-        #     #tolerance = robot_radius# Happened to be the same.
-        #     robot_footprint_matrix = [[robot_radius,robot_radius],
-        #                               [robot_radius,-1*robot_radius],
-        #                               [-robot_radius,robot_radius],
-        #                               [-robot_radius,-1*robot_radius]]
-        #     robot_footprint_string = '['+','.join(
-        #             str_sublist for str_sublist 
-        #                 in [''.join(str(ele)) 
-        #                     for ele in robot_footprint_matrix ])+']'
-        #     set_param_node = SetParameterClient(robot_radius,tolerance,robot_footprint_string,inflation_radius,xy_goal_tolerance)
-        #     while (not is_localmap_param_set) or (not is_globalmap_param_set):
-        #         rclpy.spin_once(set_param_node)
-        #         print('setting params')
-        #         time.sleep(0.05)
-        #     set_param_node.destroy_node()
-        #     navigator.waitUntilNav2Active()
-        #     shipping_pose = setNavigationGoal(shipping_destinations_reverse, navigator)
-        #     navigator.goToPose(shipping_pose)
-        #     wait_navigation(navigator)
-        #     is_to_shipping_reverse_success = nstate_change_to_navigation_result(navigator.getResult(),
-        #          TheState.BackToBeforeShipping, TheState.EndProgramFailure)
-        #     robot_radius /= 2
-  
-        # service_client_node2 = ServiceClient()    
-        # while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
-        #     rclpy.spin_once(service_client_node2)
-        #     print('at main '+nstate.name)           
-        #     if nstate == TheState.BackToBeforeShipping:
-        #         break
-        rotate_node = Rotation180()
-        while not is_rotating_done:
-            rclpy.spin_once(rotate_node)
-            print('Rotate..')
-            time.sleep(0.05)
-        rotate_node.destroy_node()
-        # service_client_node2 = ServiceClient()    
-        # while rclpy.ok and not(nstate == TheState.EndProgramFailure or nstate == TheState.EndProgramSuccess):
-        #     rclpy.spin_once(service_client_node2)
-        #     print('at main '+nstate.name)           
-        #     if nstate == TheState.BackToBeforeShipping:
-        #         break
+            rotate_node.destroy_node()
+        else:
+            while (not is_lifting_done):
+                    rclpy.spin_once(lift_down_node)
+                    print('lifting')
+                    time.sleep(0.05)
+            while not is_to_shipping_reverse_success:
+                inflation_radius = 0.1 # Good value
+                tolerance = robot_radius# Happened to be the same.
+                robot_footprint_matrix = [[robot_radius,robot_radius],
+                                        [robot_radius,-1*robot_radius],
+                                        [-robot_radius,robot_radius],
+                                        [-robot_radius,-1*robot_radius]]
+                robot_footprint_string = '['+','.join(
+                        str_sublist for str_sublist 
+                            in [''.join(str(ele)) 
+                                for ele in robot_footprint_matrix ])+']'
+                set_param_node = SetParameterClient(robot_radius,tolerance,robot_footprint_string,inflation_radius,xy_goal_tolerance)
+                while (not is_localmap_param_set) or (not is_globalmap_param_set):
+                    rclpy.spin_once(set_param_node)
+                    print('setting params')
+                    time.sleep(0.05)
+                set_param_node.destroy_node()
+                navigator.waitUntilNav2Active()
+                shipping_pose = setNavigationGoal(shipping_destinations_reverse, navigator)
+                navigator.goToPose(shipping_pose)
+                wait_navigation(navigator)
+                is_to_shipping_reverse_success = nstate_change_to_navigation_result(navigator.getResult(),
+                    TheState.BackToBeforeShipping, TheState.EndProgramFailure)
+                robot_radius /= 2
         nstate = TheState.BackToBeforeShipping
     else:
         print('some state logic failure at '+nstate.name)

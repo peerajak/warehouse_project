@@ -14,7 +14,7 @@ attach_to_shelf_exec=''
 def controller_description():
     LogInfo(
             msg=LaunchConfiguration('Restarting ' + attach_to_shelf_exec))
-    return Node(
+    attach_shelf_node = Node(
         package='path_planner_server',
         executable= attach_to_shelf_exec,
         output='screen',
@@ -23,6 +23,15 @@ def controller_description():
                 'obstacle') ],
         remappings=[('/cmd_vel', cmd_vel_remapping),]
     )
+    return [
+    attach_shelf_node,
+    RegisterEventHandler(# Call attach_to_shelf_exec everytime it exits
+            OnProcessExit(
+                target_action=attach_shelf_node,
+                on_exit=on_exit_restart
+            )
+        )
+    ]
 
 
 def on_exit_restart(event:ProcessExited, context:LaunchContext):

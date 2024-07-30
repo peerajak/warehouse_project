@@ -304,10 +304,10 @@ private:
   rclcpp::CallbackGroup::SharedPtr callback_group_3_laser;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
       subscription_3_laser;
-  const double precision_threshold = 0.03;
-  const double precision2_threshold = 0.03;
-  const double precision_angular_threshold = 0.03;
-  const double laser_intensity_threshold = 2000;
+  const double precision_threshold = 0.01;
+  const double precision2_threshold = 0.01;
+  const double precision_angular_threshold = 0.01;
+  const double laser_intensity_threshold = 2700;
   //--------4. Service related -----------//
   rclcpp::CallbackGroup::SharedPtr callback_group_4_service;
   rclcpp::Service<GoToLoading>::SharedPtr srv_4_service;
@@ -773,7 +773,7 @@ private:
             ling.angular.z = 0;
             move_robot(ling);
      rclcpp::shutdown();
-
+     //nstate = service_activated;
       break;
     }
 
