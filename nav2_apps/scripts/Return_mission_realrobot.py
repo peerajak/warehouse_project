@@ -17,7 +17,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.qos import ReliabilityPolicy, QoSProfile
 
 initial_positions = [0.,0.,0.,0.]
-shipping_destinations= [1.3,0.6,-0.4,-0.3847139877813617]
+shipping_destinations = [ 3.7, -1.9,0.7938911945621069,-0.6080598417892362]
 is_localized = False
 is_odom_initialized = False
 realrobot_move_topic = '/cmd_vel'

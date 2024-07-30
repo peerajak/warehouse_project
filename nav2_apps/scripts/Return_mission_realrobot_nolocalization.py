@@ -13,7 +13,7 @@ import rclpy
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.qos import ReliabilityPolicy, QoSProfile
 
-shipping_destinations = [-0.9,-0.3,0.1,0.999]
+shipping_destinations = [ 3.7, -1.9,0.7938911945621069,-0.4080598417892362]
 
 def main():
     global nstate

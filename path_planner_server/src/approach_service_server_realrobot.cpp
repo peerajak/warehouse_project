@@ -307,7 +307,7 @@ private:
   const double precision_threshold = 0.03;
   const double precision2_threshold = 0.03;
   const double precision_angular_threshold = 0.03;
-  const double laser_intensity_threshold = 2700;
+  const double laser_intensity_threshold = 2000;
   //--------4. Service related -----------//
   rclcpp::CallbackGroup::SharedPtr callback_group_4_service;
   rclcpp::Service<GoToLoading>::SharedPtr srv_4_service;
@@ -652,8 +652,8 @@ private:
             RCLCPP_INFO(this->get_logger(), "ttt.x: %f, ttt.y: %f, atan radian %f",
             ttt.transform.translation.x,ttt.transform.translation.y, atan(
             ttt.transform.translation.y/ttt.transform.translation.x));  
-            double scaleRotationRate = 0.3;
-             double scaleForwardSpeed = 0.3;
+            double scaleRotationRate = 0.2;
+             double scaleForwardSpeed = 0.15;
             //double magnitude_of_ttt_linear = magnitude_of_vector(ttt.transform.translation.x,ttt.transform.translation.y);
             ling.linear.x = scaleForwardSpeed *  ttt.transform.translation.x;
             ling.linear.y = 0;
@@ -729,12 +729,12 @@ private:
            */
            
        
-            double scaleRotationRate = 0.3;
+            double scaleRotationRate = 0.2;
             double target_yaw_rad = yaw_theta_from_quaternion(
             ttt2.transform.rotation.x, ttt2.transform.rotation.y,
             ttt2.transform.rotation.z, ttt2.transform.rotation.w);
             ling.angular.z = scaleRotationRate*target_yaw_rad;  
-            double scaleForwardSpeed = 0.3;
+            double scaleForwardSpeed = 0.15;
             ling.linear.x =scaleForwardSpeed * ttt2.transform.translation.x;
             ling.linear.y = 0;
             RCLCPP_INFO(this->get_logger(), "ttt2.x: %f, ttt2.y: %f",ttt2.transform.translation.x,ttt2.transform.translation.y);    
