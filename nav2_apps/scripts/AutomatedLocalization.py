@@ -13,6 +13,8 @@ from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.qos import ReliabilityPolicy, QoSProfile
+from rclpy.duration import Duration
+
 
 is_localized = False
 is_odom_initialized = False
@@ -21,13 +23,16 @@ initial_positions = [ 0,0,0,0 ]
 
 realrobot_move_topic = '/cmd_vel'
 simrobot_move_topic = '/diffbot_base_controller/cmd_vel_unstamped'
+is_using_sim_robot = False
 
 # Shelf positions for picking
-shelf_positions = [ 3.5, -1.5,0.7938911945621069,-0.6080598417892362]
-class LocalizeNode(Node):
+shelf_positions = [ 2.3922234933879425, 0.004731793330113001 , 1.0, 0.00]
 
+class LocalizeNode(Node):
+    
     def __init__(self):
         super().__init__('minimal_subscriber')
+        global is_using_sim_robot
         my_callback_group = rclpy.callback_groups.MutuallyExclusiveCallbackGroup()
         self.service_client = self.create_client(
             srv_type=Empty,
@@ -43,13 +48,19 @@ class LocalizeNode(Node):
         self.rotating_direction = 1
         self.angular_speed = 0.9
         self.timer2 = self.create_timer(timer_period_sec=timer2_period,callback=self.timer2_callback,callback_group=my_callback_group)
-        self.publisher_rotate = self.create_publisher(
-            msg_type=Twist,
-            topic=realrobot_move_topic,qos_profile=1)
+        if is_using_sim_robot:
+            self.publisher_rotate = self.create_publisher(
+                msg_type=Twist,
+                topic=simrobot_move_topic,qos_profile=1)
+        else:
+            self.publisher_rotate = self.create_publisher(
+                msg_type=Twist,
+                topic=realrobot_move_topic,qos_profile=1)
         self.future: Future = None
 
     def amcl_listener_callback(self, msg):
         global is_localized
+        global initial_positions 
         self.get_logger().info('Rotating %d,I heard: "%f,%f,%f"' %  
         (self.rotating_counter,msg.pose.covariance[0],msg.pose.covariance[7],
         msg.pose.covariance[-1]))
@@ -60,7 +71,13 @@ class LocalizeNode(Node):
         if msg.pose.covariance[0] <localize_threshold[0] and \
            msg.pose.covariance[7] <localize_threshold[1] and \
            msg.pose.covariance[-1]<localize_threshold[2]:
-            is_localized = True
+                is_localized = True
+                #position = msg.pose.pose.position
+                #orientation = msg.pose.pose.orientation
+                #(initial_positions[0], initial_positions[1], posz) = (position.x, position.y, position.z)
+                #(qx, qy, initial_positions[2], initial_positions[3]) = (orientation.x, orientation.y, 
+                #                                                    orientation.z, orientation.w)
+
         
 
     def timer2_callback(self): 
@@ -80,7 +97,6 @@ class LocalizeNode(Node):
         self.timer1.cancel()
 
     def response1_callback(self, future: Future):
-        global nstate
         response = future.result()
         if response is not None:
             self.get_logger().info("Some Response happened: Success!")
@@ -107,10 +123,27 @@ class OdomSubscriber(Node):
         (qx, qy, initial_positions[2], initial_positions[3]) = (orientation.x, orientation.y, orientation.z, orientation.w)
         is_odom_initialized = True
 
+def wait_backup_or_spin(navigator):
+    i = 0
+    while not navigator.isTaskComplete():
+        i = i + 1
+        feedback = navigator.getFeedback()
+        print(feedback)
+
 
 def main():
-    global nstate
     rclpy.init()
+
+
+
+    localize_node = LocalizeNode()
+    while not is_localized:
+        rclpy.spin_once(localize_node)
+        print('localizing..')
+        time.sleep(0.05)
+    localize_node.destroy_node()
+    print('initial_position = ' ,initial_positions)
+
 
     odom_subscriber = OdomSubscriber()
     while not is_odom_initialized:
@@ -120,16 +153,9 @@ def main():
     print(initial_positions)
     odom_subscriber.destroy_node()
 
-    localize_node = LocalizeNode()
-    while not is_localized:
-        rclpy.spin_once(localize_node)
-        print('localizing..')
-        time.sleep(0.05)
-    localize_node.destroy_node()
-
 
     navigator = BasicNavigator()
-    # Set your demo's initial pose
+    # # Set your demo's initial pose
     initial_pose = PoseStamped()
     initial_pose.header.frame_id = 'map'
     initial_pose.header.stamp = navigator.get_clock().now().to_msg()
@@ -137,20 +163,27 @@ def main():
     initial_pose.pose.position.y = initial_positions[1]
     initial_pose.pose.orientation.z = initial_positions[2]
     initial_pose.pose.orientation.w = initial_positions[3]
-    print(initial_positions)
-    navigator.goToPose(initial_pose) 
+
+    # navigator.setInitialPose(initial_pose)
 
 
-    shelf_item_pose = PoseStamped()
-    shelf_item_pose.header.frame_id = 'map'
-    shelf_item_pose.header.stamp = navigator.get_clock().now().to_msg()
-    shelf_item_pose.pose.position.x =shelf_positions[0]
-    shelf_item_pose.pose.position.y =shelf_positions[1]
-    shelf_item_pose.pose.orientation.z =shelf_positions[2]
-    shelf_item_pose.pose.orientation.w =shelf_positions[3]
-    #print('Received request for item picking at ' + request_item_location + '.')
-    print(initial_positions)
-    navigator.goToPose(shelf_item_pose)
+    # shelf_item_pose = PoseStamped()
+    # shelf_item_pose.header.frame_id = 'map'
+    # shelf_item_pose.header.stamp = navigator.get_clock().now().to_msg()
+    # shelf_item_pose.pose.position.x =shelf_positions[0]
+    # shelf_item_pose.pose.position.y =shelf_positions[1]
+    # shelf_item_pose.pose.orientation.z =shelf_positions[2]
+    # shelf_item_pose.pose.orientation.w =shelf_positions[3]
+    # #print('Received request for item picking at ' + request_item_location + '.')
+    # print(initial_positions)
+    # navigator.goToPose(shelf_item_pose)
+    # wait_backup_or_spin(navigator)
+    # navigator.spin(spin_dist=1.57)
+    # wait_backup_or_spin(navigator)
+    # navigator.backup(backup_dist=5.0, backup_speed=2.0)
+    # wait_backup_or_spin(navigator)
+
+
     
 if __name__ == '__main__':
 

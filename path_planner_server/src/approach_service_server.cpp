@@ -472,7 +472,7 @@ private:
         }
         std::tuple<double, double> P1_laser_polar_coordinate =
             aggregation_of_groups_of_lasers.front()
-                .get_max_radian_of_the_group_and_corresponding_distance();
+                .get_min_radian_of_the_group_and_corresponding_distance();
         std::tuple<double, double> P2_laser_polar_coordinate =
             aggregation_of_groups_of_lasers.back()
                 .get_max_radian_of_the_group_and_corresponding_distance();

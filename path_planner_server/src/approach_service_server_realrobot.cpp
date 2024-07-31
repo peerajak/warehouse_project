@@ -307,7 +307,7 @@ private:
   const double precision_threshold = 0.01;
   const double precision2_threshold = 0.01;
   const double precision_angular_threshold = 0.01;
-  const double laser_intensity_threshold = 2700;
+  const double laser_least_intensity_threshold = 2700;
   //--------4. Service related -----------//
   rclcpp::CallbackGroup::SharedPtr callback_group_4_service;
   rclcpp::Service<GoToLoading>::SharedPtr srv_4_service;
@@ -427,9 +427,9 @@ private:
        RCLCPP_INFO(this->get_logger(),"laser() service_activated");
       if (!tf_published) {
      RCLCPP_INFO(this->get_logger(),"Publishing TF");
-        int smallest_allowable_group = 4;
+        int smallest_allowable_group = 1;
         std::vector<group_of_laser> aggregation_of_groups_of_lasers;
-        std::shared_ptr<group_of_laser> gl(new group_of_laser(laser_intensity_threshold));
+        std::shared_ptr<group_of_laser> gl(new group_of_laser(laser_least_intensity_threshold));
 
         long unsigned int i = 0;
         while (i < msg->ranges.size()) {
@@ -458,7 +458,7 @@ private:
           }
           if (gl->_state == group_of_laser::insertable_state::full) {
             RCLCPP_INFO(this->get_logger(), "groups of laser full at %ld", i);
-            gl = std::make_shared<group_of_laser>(laser_intensity_threshold);
+            gl = std::make_shared<group_of_laser>(laser_least_intensity_threshold);
             RCLCPP_INFO(this->get_logger(), "new gl created state %d",
                         gl->_state);
           }
@@ -472,7 +472,7 @@ private:
         }
         std::tuple<double, double> P1_laser_polar_coordinate =
             aggregation_of_groups_of_lasers.front()
-                .get_max_radian_of_the_group_and_corresponding_distance();
+                .get_min_radian_of_the_group_and_corresponding_distance();
         std::tuple<double, double> P2_laser_polar_coordinate =
             aggregation_of_groups_of_lasers.back()
                 .get_max_radian_of_the_group_and_corresponding_distance();
@@ -791,10 +791,9 @@ private:
     //while(true){
     float angular_z_raw =
           radian_difference(target_yaw_rad_, current_yaw_rad_);
-
+      double scaleRotationRate = 0.2;
       ling.linear.x = 0.0;
-      ling.angular.z =
-          angular_z_raw < 1.5 ? angular_z_raw : 0.5 * angular_z_raw;
+      ling.angular.z = scaleRotationRate * angular_z_raw;
       // if (std::abs(ling.angular.z ) >1)
       //      ling.angular.z *= 0.1;
       move_robot(ling);
