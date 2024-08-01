@@ -106,7 +106,7 @@ public:
     size = 0;
   }
   int insert(double a_radian, double a_range, double an_intensity) {
-    if (an_intensity > _least_intensity &&
+    if (an_intensity > _least_intensity &&  a_range < _max_interested_range &&
         _state ==
             group_of_laser::insertable_state::insertable) { // insert only if
                                                             // this is true
@@ -160,6 +160,7 @@ public:
 
 private:
   double _least_intensity;
+  double _max_interested_range = 1.2;
   std::vector<double> ranges_vector;
   std::vector<double> radians_vector;
   std::vector<double> intensity_vector;
@@ -443,8 +444,8 @@ private:
                                            msg->ranges[i], msg->intensities[i]);
             switch (result_insert) {
             case 0:
-              RCLCPP_INFO(this->get_logger(), "inserted %ld, intensity %f", i,
-                          msg->intensities[i]);
+              RCLCPP_INFO(this->get_logger(), "inserted %ld, intensity %f, range %f", i,
+                          msg->intensities[i],msg->ranges[i]);
               break;
             case 1:; // RCLCPP_INFO(this->get_logger(), "full at %ld", i);
               break;
