@@ -510,12 +510,12 @@ def main():
             spin_direction *= -1
             navigator.spin(spin_dist=spin_direction*0.01)
             wait_backup_or_spin(navigator)
-        if (nstate == TheState.EndProgramFailure):
-            rand1 = random.random()-0.5
-            rand2 = random.random()-0.5
-            shelf_positions[0] += rand1
-            shelf_positions[1] += rand2
-            nstate = TheState.AttachShelf
+            if (nstate == TheState.EndProgramFailure):
+                rand1 = random.random()-0.5
+                rand2 = random.random()-0.5
+                shelf_positions[0] += rand1
+                shelf_positions[1] += rand2
+                nstate = TheState.AttachShelf
 
 
     if(nstate == TheState.ToShelfReverse):
@@ -598,13 +598,13 @@ def main():
 
     if(nstate == TheState.ToShipping):
         is_to_shipping_success = False
-        robot_radius= robot_radius_large
+        robot_radius= robot_radius_initial
         xy_goal_tolerance =  xy_goal_tolerance_initial
-        inflation_radius = 0.1
         is_localmap_param_set = False
         is_globalmap_param_set = False
         while not is_to_shipping_success:            
             tolerance = robot_radius# Happened to be the same.
+            inflation_radius = robot_radius
             robot_footprint_matrix = [[cart_form_factor*robot_radius,robot_radius],
                                       [cart_form_factor*robot_radius,-1*robot_radius],
                                       [-cart_form_factor*robot_radius,robot_radius],
@@ -625,9 +625,9 @@ def main():
             wait_navigation(navigator)
             is_to_shipping_success = nstate_change_to_navigation_result(navigator.getResult(),
                  TheState.ToShippingReverse, TheState.ToShipping)
-            robot_radius /= 4
+            robot_radius /= 2
             # xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
-            if robot_radius <= 0.05:
+            if robot_radius <= 0.01:
                 nstate = TheState.ToShippingReverse
                 break
     else:
@@ -636,14 +636,45 @@ def main():
 
    
     if(nstate == TheState.ToShippingReverse):
-        robot_radius= robot_radius_large
+        robot_radius= robot_radius_initial
+        tolerance = robot_radius# Happened to be the same.
         xy_goal_tolerance =  xy_goal_tolerance_initial
         is_localmap_param_set = False
         is_globalmap_param_set = False
+        # while not is_to_shipping_success:
+        tolerance = robot_radius# Happened to be the same.
+        inflation_radius = robot_radius
+        robot_footprint_matrix = [[cart_form_factor*robot_radius,robot_radius],
+                                    [cart_form_factor*robot_radius,-1*robot_radius],
+                                    [-cart_form_factor*robot_radius,robot_radius],
+                                    [-cart_form_factor*robot_radius,-1*robot_radius]]
+        robot_footprint_string = '['+','.join(
+                str_sublist for str_sublist 
+                    in [''.join(str(ele)) 
+                        for ele in robot_footprint_matrix ])+']'
+        set_param_node = SetParameterClient(robot_radius, tolerance,robot_footprint_string,inflation_radius,xy_goal_tolerance)
+        while (not is_localmap_param_set) or (not is_globalmap_param_set):
+            rclpy.spin_once(set_param_node)
+            #print('setting params')
+            time.sleep(0.05)
+        set_param_node.destroy_node()
+            # navigator.waitUntilNav2Active()
+            # shipping_pose = setNavigationGoal(shipping_destinations, navigator)
+            # navigator.goToPose(shipping_pose)
+            # wait_navigation(navigator)
+            # is_to_shipping_success = nstate_change_to_navigation_result(navigator.getResult(),
+            #      TheState.BackToBeforeShipping, TheState.ToShipping)
+            # robot_radius /= 4
+            # # xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
+            # if robot_radius <= 0.005:
+            #     nstate = TheState.BackToBeforeShipping
+            #     break
+
+
         lift_down_node = LiftUpDown(False)
+        print('lifting')
         while (not is_lifting_done):
                 rclpy.spin_once(lift_down_node)
-                print('lifting')
                 time.sleep(0.05)
         nstate = TheState.BackToBeforeShipping
     else:
@@ -671,7 +702,7 @@ def main():
             set_param_node = SetParameterClient(robot_radius,tolerance,robot_footprint_string,inflation_radius,xy_goal_tolerance)
             while (not is_localmap_param_set) or (not is_globalmap_param_set):
                 rclpy.spin_once(set_param_node)
-                print('setting params')
+                #print('setting params')
                 time.sleep(0.05)
             set_param_node.destroy_node()
             navigator.waitUntilNav2Active()
@@ -707,7 +738,7 @@ def main():
             set_param_node = SetParameterClient(robot_radius,tolerance,robot_footprint_string,inflation_radius,xy_goal_tolerance)
             while (not is_localmap_param_set) or (not is_globalmap_param_set):
                 rclpy.spin_once(set_param_node)
-                print('setting params')
+                #print('setting params')
                 time.sleep(0.05)
             set_param_node.destroy_node()
             navigator.waitUntilNav2Active()
