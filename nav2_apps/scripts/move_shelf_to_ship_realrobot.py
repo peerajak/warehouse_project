@@ -380,8 +380,8 @@ class ServiceClient(Node):
             self.publisher_lift.publish(msgs_empty)
             if nstate == TheState.AttachShelf:
                 nstate = TheState.ToShelfReverse
-            # elif nstate == TheState.ToShippingReverse:
-            #     nstate = TheState.BackToBeforeShipping
+            elif nstate == TheState.ToShippingReverse:
+                 nstate = TheState.BackToBeforeShipping
         else:
             self.get_logger().info("response from service server: Failed!")
             nstate = TheState.EndProgramFailure
@@ -440,7 +440,7 @@ def main():
     robot_radius_initial = 0.15
     cart_form_factor = 1.2
     tolerance = 0.5
-    xy_goal_tolerance_initial = 0.25
+    xy_goal_tolerance_initial = 0.15
     inflation_radius = 0.25
     spin_direction = 1
 
@@ -488,7 +488,7 @@ def main():
             is_to_preload_success = nstate_change_to_navigation_result(navigator.getResult(), 
             TheState.AttachShelf, TheState.ToPreload)
             robot_radius /= 2
-            xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
+            #xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
             if robot_radius <= 0.12:
                 nstate = TheState.AttachShelf
                 break
@@ -548,7 +548,7 @@ def main():
             is_to_just_before_success = nstate_change_to_navigation_result(navigator.getResult(),
                 TheState.ToBeforeShipping, TheState.ToShelfReverse)
             robot_radius /= 2
-            xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
+            #xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
             if robot_radius <= 0.12:
                 nstate = TheState.ToBeforeShipping
                 break
@@ -587,7 +587,7 @@ def main():
             is_to_just_before_success = nstate_change_to_navigation_result(navigator.getResult(),
                 TheState.ToShipping, TheState.ToBeforeShipping)
             robot_radius /= 2
-            xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
+            #xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
             if robot_radius <= 0.12:
                 nstate = TheState.ToShipping
                 break
@@ -598,8 +598,8 @@ def main():
 
     if(nstate == TheState.ToShipping):
         is_to_shipping_success = False
-        robot_radius= robot_radius_initial
-        xy_goal_tolerance =  xy_goal_tolerance_initial
+        robot_radius= robot_radius_large
+        xy_goal_tolerance =  0.25#xy_goal_tolerance_initial
         is_localmap_param_set = False
         is_globalmap_param_set = False
         while not is_to_shipping_success:            
@@ -622,12 +622,13 @@ def main():
             navigator.waitUntilNav2Active()
             shipping_pose = setNavigationGoal(shipping_destinations, navigator)
             navigator.goToPose(shipping_pose)
+            time.sleep(5)
             wait_navigation(navigator)
             is_to_shipping_success = nstate_change_to_navigation_result(navigator.getResult(),
                  TheState.ToShippingReverse, TheState.ToShipping)
             robot_radius /= 2
             # xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
-            if robot_radius <= 0.01:
+            if robot_radius <= 0.1:
                 nstate = TheState.ToShippingReverse
                 break
     else:
@@ -658,24 +659,27 @@ def main():
             #print('setting params')
             time.sleep(0.05)
         set_param_node.destroy_node()
-            # navigator.waitUntilNav2Active()
-            # shipping_pose = setNavigationGoal(shipping_destinations, navigator)
-            # navigator.goToPose(shipping_pose)
-            # wait_navigation(navigator)
-            # is_to_shipping_success = nstate_change_to_navigation_result(navigator.getResult(),
-            #      TheState.BackToBeforeShipping, TheState.ToShipping)
-            # robot_radius /= 4
-            # # xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
-            # if robot_radius <= 0.005:
-            #     nstate = TheState.BackToBeforeShipping
-            #     break
-
-
         lift_down_node = LiftUpDown(False)
-        print('lifting')
+        print('lifting Down')
         while (not is_lifting_done):
                 rclpy.spin_once(lift_down_node)
                 time.sleep(0.05)
+        time.sleep(4)
+        print('rotating')
+        rotate_node = Rotation180()
+        while not is_rotating_done:
+            rclpy.spin_once(rotate_node)
+            print('Rotating..')
+            time.sleep(0.05)
+        rotate_node.destroy_node()
+        time.sleep(2)        
+        # service_client_node = ServiceClient()    
+        # while rclpy.ok :
+        #     rclpy.spin_once(service_client_node )
+        #     print('at main '+nstate.name)
+        #     if nstate == TheState.BackToBeforeShipping:
+        #         break
+        # time.sleep(4)
         nstate = TheState.BackToBeforeShipping
     else:
         print('some state logic failure at '+nstate.name)
@@ -712,7 +716,7 @@ def main():
             is_backto_before_shipping_success = nstate_change_to_navigation_result(navigator.getResult(),
                  TheState.BackToInitialPosition,TheState.BackToBeforeShipping)
             robot_radius /= 2
-            xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
+            #xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
 
     else:
         print('some state logic failure at '+nstate.name)
@@ -748,7 +752,7 @@ def main():
             is_backto_initial_position_success = nstate_change_to_navigation_result(navigator.getResult(),
                  TheState.EndProgramSuccess, TheState.BackToInitialPosition)
             robot_radius /= 2
-            xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
+            #xy_goal_tolerance =  0.5 if xy_goal_tolerance >= 0.5 else xy_goal_tolerance * 2 
     else:
         print('some state logic failure at '+nstate.name)
         nstate == TheState.BackToInitialPosition

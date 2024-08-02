@@ -13,7 +13,7 @@ import rclpy
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.qos import ReliabilityPolicy, QoSProfile
 
-shipping_destinations =  [1.3,0.4,-0.4,-0.3847139877813617]
+shipping_destinations =  [1.3,0.5,-0.4,-0.3847139877813617]
 
 def wait_navigation(navigator):
     global nstate
@@ -41,14 +41,14 @@ def main():
     rclpy.init()
 
     navigator = BasicNavigator()
-    # shipping_destination = PoseStamped()
-    # shipping_destination.header.frame_id = 'map'
-    # shipping_destination.header.stamp = navigator.get_clock().now().to_msg()
-    # shipping_destination.pose.position.x = shipping_destinations[0]
-    # shipping_destination.pose.position.y = shipping_destinations[1]
-    # shipping_destination.pose.orientation.z = shipping_destinations[2]
-    # shipping_destination.pose.orientation.w = shipping_destinations[3]
-    # navigator.goToPose(shipping_destination)
+    shipping_destination = PoseStamped()
+    shipping_destination.header.frame_id = 'map'
+    shipping_destination.header.stamp = navigator.get_clock().now().to_msg()
+    shipping_destination.pose.position.x = shipping_destinations[0]
+    shipping_destination.pose.position.y = shipping_destinations[1]
+    shipping_destination.pose.orientation.z = shipping_destinations[2]
+    shipping_destination.pose.orientation.w = shipping_destinations[3]
+    navigator.goToPose(shipping_destination)
     navigator.spin(spin_dist=3.14, time_allowance=10)
     wait_backup_or_spin(navigator)
 

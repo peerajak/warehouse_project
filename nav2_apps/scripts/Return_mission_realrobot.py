@@ -446,7 +446,7 @@ def main():
 
     # Wait for navigation to activate fully
     navigator.waitUntilNav2Active()
-    nstate = TheState.ToShippingReverse
+    nstate = TheState.ToShipping
 
     if(nstate == TheState.ToBeforeShipping):
         is_to_just_before_success = False
