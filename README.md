@@ -116,5 +116,6 @@ Finally, unload the robot shelf and return to the init_position.
 ![alt text](Checkpoint12_result2.png)
 ![alt text](Checkpoint12_result3.png)
 ![alt text](Checkpoint12_result4.png)
-
+![alt text](Checkpoint12_result5.png)
+You can see there is an approximation of the size of robot with cart, and robot radius showing on the robot in RVIZ
 Successfully.
