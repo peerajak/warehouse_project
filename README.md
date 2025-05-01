@@ -119,3 +119,39 @@ Finally, unload the robot shelf and return to the init_position.
 ![alt text](Checkpoint12_result5.png)
 You can see there is an approximation of the size of robot with cart, and robot radius showing on the robot in RVIZ
 Successfully.
+
+
+## Home Running
+
+Terminal 1
+
+```
+cd ~/ros2_ws/
+source install/setup.bash
+ros2 launch the_construct_office_gazebo_cp11_cp12 warehouse_rb1.launch.xml
+```
+
+
+Terminal 2
+
+```
+cd ~/ros2_ws/
+source install/setup.bash
+ros2 launch localization_server_cp12 localization.launch.py map_file:=warehouse_map_sim.yaml
+```
+
+Terminal 3
+
+```
+cd ~/ros2_ws/
+source install/setup.bash
+ros2 launch path_planner_server_cp12 pathplanner.launch.py env_type:=sim
+```
+
+Terminal 4
+
+```
+cd ~/ros2_ws/
+source install/setup.bash
+python3 ~/ros2_ws/src/Checkpoint12/nav2_apps/scripts/move_shelf_to_ship.py
+```
