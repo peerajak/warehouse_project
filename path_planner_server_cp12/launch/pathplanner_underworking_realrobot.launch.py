@@ -5,12 +5,12 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
 
-    controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller_realrobot.yaml')
-    bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt_realrobot.yaml')
-    planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'planner_server.yaml')
-    recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery_realrobot.yaml')
+    controller_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'controller_realrobot.yaml')
+    bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'bt_realrobot.yaml')
+    planner_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'planner_server.yaml')
+    recovery_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'recovery_realrobot.yaml')
     # RVIZ Configuration
-    package_description = "path_planner_server"
+    package_description = "path_planner_server_cp12"
     rviz_config_dir = os.path.join(get_package_share_directory(package_description), 'config', 'pathplanning.rviz')
     rviz_node = Node(
             package='rviz2',

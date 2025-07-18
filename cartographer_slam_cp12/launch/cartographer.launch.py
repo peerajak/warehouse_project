@@ -9,9 +9,9 @@ from launch.actions import OpaqueFunction
 
 def is_sim(context: LaunchContext, launchConfig):
     value = context.perform_substitution(launchConfig)  
-    cartographer_config_dir = os.path.join(get_package_share_directory('cartographer_slam'), 'config')
+    cartographer_config_dir = os.path.join(get_package_share_directory('cartographer_slam_cp12'), 'config')
     # RVIZ Configuration
-    package_description = "cartographer_slam"
+    package_description = "cartographer_slam_cp12"
 
 
     

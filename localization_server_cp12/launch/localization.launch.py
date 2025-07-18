@@ -12,7 +12,7 @@ def is_sim(context: LaunchContext, launchConfig):
     map_file_name=[
                     PathJoinSubstitution(
                         [
-                            FindPackageShare("map_server"),
+                            FindPackageShare("map_server_cp12"),
                             "config",
                         ]
                     ),
@@ -21,16 +21,16 @@ def is_sim(context: LaunchContext, launchConfig):
                 ]
 
     # RVIZ Configuration
-    package_description = "localization_server"
+    package_description = "localization_server_cp12"
     if(value.find('sim') > 0):
         bool_use_sim_time = True
         sim_or_real_str = 'loading amcl_config for sim robot'
-        nav2_yaml = os.path.join(get_package_share_directory('localization_server'), 'config', 'amcl_config.yaml')  
+        nav2_yaml = os.path.join(get_package_share_directory('localization_server_cp12'), 'config', 'amcl_config.yaml')  
         rviz_config_dir = os.path.join(get_package_share_directory(package_description), 'config', 'pathplanning.rviz')
     else:
         bool_use_sim_time = False
         sim_or_real_str = 'loading amcl_config_realrobot for real robot'
-        nav2_yaml = os.path.join(get_package_share_directory('localization_server'), 'config', 'amcl_config_realrobot.yaml')
+        nav2_yaml = os.path.join(get_package_share_directory('localization_server_cp12'), 'config', 'amcl_config_realrobot.yaml')
         rviz_config_dir = os.path.join(get_package_share_directory(package_description), 'config', 'pathplanning.rviz')
     return  [LogInfo(msg=sim_or_real_str),
             LogInfo(msg=LaunchConfiguration('map_file')),

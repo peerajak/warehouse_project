@@ -13,7 +13,7 @@ def is_sim(context: LaunchContext, launchConfig):
     map_file_name=[
                     PathJoinSubstitution(
                         [
-                            FindPackageShare("map_server"),
+                            FindPackageShare("map_server_cp12"),
                             "config",
                         ]
                     ),
@@ -21,7 +21,7 @@ def is_sim(context: LaunchContext, launchConfig):
                     LaunchConfiguration("map_file")
                 ]
     # RVIZ Configuration
-    package_description = "map_server"
+    package_description = "map_server_cp12"
     if(value.find('sim') > 0):
         bool_use_sim_time = True
         sim_or_real_str = 'loading amcl_config for sim robot'
@@ -42,7 +42,7 @@ def is_sim(context: LaunchContext, launchConfig):
         Node(
             package='nav2_map_server',
             executable='map_server',
-            name='map_server',
+            name='map_server_cp12',
             output='screen',
             parameters=[{'use_sim_time': bool_use_sim_time}, 
                         {'yaml_filename':map_file_name} 
@@ -54,7 +54,7 @@ def is_sim(context: LaunchContext, launchConfig):
             output='screen',
             parameters=[{'use_sim_time': bool_use_sim_time},
                         {'autostart': True},
-                        {'node_names': ['map_server']}])
+                        {'node_names': ['map_server_cp12']}])
         ]
 
 

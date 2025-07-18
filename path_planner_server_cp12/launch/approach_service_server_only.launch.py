@@ -19,7 +19,7 @@ def generate_launch_description():
         # All the arguments have to be strings. Floats will give an error of NonItreable.
 
         Node(
-        package='path_planner_server',
+        package='path_planner_server_cp12',
         executable='approach_service_server_node',
         output='screen',
         emulate_tty=True,

@@ -8,7 +8,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     
-    nav2_yaml = os.path.join(get_package_share_directory('localization_server'), 'config', 'amcl_config_realrobot.yaml')
+    nav2_yaml = os.path.join(get_package_share_directory('localization_server_cp12'), 'config', 'amcl_config_realrobot.yaml')
     map_file_name=[
                     PathJoinSubstitution(
                         [
@@ -20,7 +20,7 @@ def generate_launch_description():
                     LaunchConfiguration("map_file")
                 ]
     # RVIZ Configuration
-    package_description = "localization_server"
+    package_description = "localization_server_cp12"
     rviz_config_dir = os.path.join(get_package_share_directory(package_description), 'config', 'rviz2_config.rviz')
 
 

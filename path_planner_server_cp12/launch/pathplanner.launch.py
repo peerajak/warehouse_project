@@ -15,7 +15,7 @@ def controller_description():
     LogInfo(
             msg=LaunchConfiguration('Restarting ' + attach_to_shelf_exec))
     attach_shelf_node = Node(
-        package='path_planner_server',
+        package='path_planner_server_cp12',
         executable= attach_to_shelf_exec,
         output='screen',
         emulate_tty=True,
@@ -45,27 +45,27 @@ def is_sim(context: LaunchContext, launchConfig):
     global attach_to_shelf_exec
     value = context.perform_substitution(launchConfig)  
     # RVIZ Configuration
-    # package_description = "path_planner_server"
+    # package_description = "path_planner_server_cp12"
     # rviz_config_dir = os.path.join(get_package_share_directory(package_description), 'config', 'pathplanning.rviz')
     if(value == 'real'):
         sim_or_real_str = 'loading config_realrobot for real robot'
         bool_use_sim_time = False
         attach_to_shelf_exec = 'approach_service_server_realrobot_node'
-        controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller_realrobot.yaml')
-        bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt_realrobot.yaml')      
-        recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery_realrobot.yaml')
-        planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'planner_server_realrobot.yaml')
-        filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'filter_realrobot.yaml')
+        controller_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'controller_realrobot.yaml')
+        bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'bt_realrobot.yaml')      
+        recovery_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'recovery_realrobot.yaml')
+        planner_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'planner_server_realrobot.yaml')
+        filters_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'filter_realrobot.yaml')
         cmd_vel_remapping = '/cmd_vel'
     else:
         sim_or_real_str = 'loading config for sim robot'
         bool_use_sim_time = True
         attach_to_shelf_exec = 'approach_service_server_node'
-        controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'controller.yaml')
-        bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'bt.yaml') 
-        recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'recovery.yaml')
-        planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'planner_server.yaml')
-        filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'filter.yaml')
+        controller_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'controller.yaml')
+        bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'bt.yaml') 
+        recovery_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'recovery.yaml')
+        planner_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'planner_server.yaml')
+        filters_yaml = os.path.join(get_package_share_directory('path_planner_server_cp12'), 'config', 'filter.yaml')
         cmd_vel_remapping = '/diffbot_base_controller/cmd_vel_unstamped'
     
     lifecycle_mger = Node(
@@ -83,7 +83,7 @@ def is_sim(context: LaunchContext, launchConfig):
                                         'costmap_filter_info_server'
                                         ]}])
     attach_shelf_node = Node(
-        package='path_planner_server',
+        package='path_planner_server_cp12',
         executable= attach_to_shelf_exec,
         output='screen',
         emulate_tty=True,
