@@ -31,6 +31,8 @@ ros2 launch the_construct_office_gazebo_cp11_cp12 warehouse_rb1.launch.xml
 - Terminal 2
 ros2 launch localization_server_cp12 localization.launch.py map_file:=warehouse_map_sim.yaml
 
+Go to RVIZ and click Pose Estimation Button, and click the robot for pose estimation
+
 
 - Terminal 3
 ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args  -r cmd_vel:=/diffbot_base_controller/cmd_vel_unstamped
@@ -47,10 +49,12 @@ ros2 launch the_construct_office_gazebo_cp11_cp12 warehouse_rb1.launch.xml
 - Terminal 2
 ros2 launch localization_server_cp12 localization.launch.py map_file:=warehouse_map_sim.yaml
 
+Go to RVIZ and click Pose Estimation Button, and click the robot for pose estimation
+
 - Terminal 3
 ros2 launch path_planner_server_cp12 pathplanner.launch.py env_type:=sim
 
-
+Go to RVIZ and click Goal Pose Button, and click the robot destination
 
 #### Useful commands
 ------------------- View Frames ------------------------------
@@ -77,16 +81,11 @@ Afterwards, move the shelf to the shipping_position while avoiding the cones are
 Finally, unload the robot shelf and return to the init_position.
 
 ## Result
-![alt text](Checkpoint12_result1.png)
-![alt text](Checkpoint12_result2.png)
-![alt text](Checkpoint12_result3.png)
-![alt text](Checkpoint12_result4.png)
-![alt text](Checkpoint12_result5.png)
+
 You can see there is an approximation of the size of robot with cart, and robot radius showing on the robot in RVIZ
 Successfully.
 
 
-## Home Running
 
 Terminal 1
 
@@ -105,6 +104,9 @@ source install/setup.bash
 ros2 launch localization_server_cp12 localization.launch.py map_file:=warehouse_map_sim.yaml
 ```
 
+No need to click Pose Estimation on RVIZ
+
+
 Terminal 3
 
 ```
@@ -112,6 +114,8 @@ cd ~/ros2_ws/
 source install/setup.bash
 ros2 launch path_planner_server_cp12 pathplanner.launch.py env_type:=sim
 ```
+No need to click Goal Pose on RVIZ
+
 
 Terminal 4
 
